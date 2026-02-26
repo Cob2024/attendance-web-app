@@ -389,3 +389,63 @@ export const getAttendanceStats = (courseId: string) => {
     averageAttendance: totalSessions > 0 ? (courseAttendance.length / (totalSessions * enrolledCount)) * 100 : 0
   };
 };
+
+// Register a new user (student or lecturer)
+export const registerUser = (
+  name: string,
+  email: string,
+  password: string,
+  role: 'student' | 'lecturer',
+  studentId?: string,
+  course?: string,
+  level?: string
+) => {
+  const users = JSON.parse(localStorage.getItem('users') || '[]');
+
+  // Check if email + role combo already exists
+  const existing = users.find((u: any) => u.email === email && u.role === role);
+  if (existing) {
+    return { success: false, error: 'An account with this email already exists' };
+  }
+
+  // For students, check if student ID is already taken
+  if (role === 'student') {
+    if (!studentId || !course || !level) {
+      return { success: false, error: 'Student ID, Course, and Level are required for students' };
+    }
+    const existingStudentId = users.find((u: any) => u.studentId === studentId);
+    if (existingStudentId) {
+      return { success: false, error: 'This Student ID is already registered' };
+    }
+  }
+
+  const newUser: any = {
+    id: `${role === 'student' ? 's' : 'l'}${Date.now()}`,
+    name,
+    email,
+    password,
+    role,
+  };
+
+  if (role === 'student') {
+    newUser.studentId = studentId;
+    newUser.course = course;
+    newUser.level = level;
+  }
+
+  users.push(newUser);
+  localStorage.setItem('users', JSON.stringify(users));
+
+  // Auto-enroll new students into all existing courses
+  if (role === 'student') {
+    const courses = JSON.parse(localStorage.getItem('courses') || '[]');
+    const enrollments = JSON.parse(localStorage.getItem('enrollments') || '[]');
+    courses.forEach((c: any) => {
+      enrollments.push({ studentId: newUser.id, courseId: c.id });
+    });
+    localStorage.setItem('enrollments', JSON.stringify(enrollments));
+  }
+
+  const { password: _, ...userWithoutPassword } = newUser;
+  return { success: true, user: userWithoutPassword };
+};

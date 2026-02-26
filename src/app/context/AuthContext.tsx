@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { registerUser } from '../services/mockData';
 
 export interface User {
   id: string;
@@ -13,6 +14,15 @@ export interface User {
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string, role: 'student' | 'lecturer') => Promise<{ success: boolean; error?: string }>;
+  signup: (
+    name: string,
+    email: string,
+    password: string,
+    role: 'student' | 'lecturer',
+    studentId?: string,
+    course?: string,
+    level?: string
+  ) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -52,13 +62,35 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const signup = async (
+    name: string,
+    email: string,
+    password: string,
+    role: 'student' | 'lecturer',
+    studentId?: string,
+    course?: string,
+    level?: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const result = registerUser(name, email, password, role, studentId, course, level);
+      if (result.success && result.user) {
+        setUser(result.user);
+        localStorage.setItem('currentUser', JSON.stringify(result.user));
+        return { success: true };
+      }
+      return { success: false, error: result.error };
+    } catch (error) {
+      return { success: false, error: 'Registration failed' };
+    }
+  };
+
   const logout = () => {
     setUser(null);
     localStorage.removeItem('currentUser');
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, login, signup, logout, isAuthenticated: !!user }}>
       {children}
     </AuthContext.Provider>
   );
