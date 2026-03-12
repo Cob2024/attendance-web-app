@@ -108,8 +108,8 @@ export const Login: React.FC = () => {
         <div className="bg-white rounded-2xl shadow-xl p-5 sm:p-8">
           {/* Logo and Title */}
           <div className="text-center mb-6">
-            <div className="inline-flex items-center justify-center w-20 h-20 sm:w-28 sm:h-28 mb-4">
-              <img src="/assets/ttu-logo.png" alt="Takoradi Technical University Logo" className="w-20 h-20 sm:w-28 sm:h-28 object-contain" />
+            <div className="inline-flex items-center justify-center w-28 h-28 sm:w-36 sm:h-36 mb-4">
+              <img src="/assets/ttu-logo.png" alt="Takoradi Technical University Logo" className="w-28 h-28 sm:w-36 sm:h-36 object-contain" />
             </div>
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">SmartAttend</h1>
             <p className="text-gray-600">{isSignup ? 'Create your account' : 'Attendance Management System'}</p>
@@ -350,24 +350,11 @@ export const Login: React.FC = () => {
             </p>
           </div>
 
-          {/* Demo Credentials (login mode only) */}
-          {!isSignup && (
-            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-              <p className="text-sm font-medium text-gray-700 mb-2">Demo Credentials:</p>
-              <div className="space-y-2 text-sm text-gray-600">
-                <div>
-                  <p className="font-medium text-gray-700">Student:</p>
-                  <p>Email: student@ttu.edu.gh</p>
-                  <p>Password: student123</p>
-                </div>
-                <div className="mt-2">
-                  <p className="font-medium text-gray-700">Lecturer:</p>
-                  <p>Email: lecturer@ttu.edu.gh</p>
-                  <p>Password: lecturer123</p>
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Copyright */}
+          <p className="mt-6 text-center text-xs text-gray-400">
+            © 2026 Takoradi Technical University. All rights reserved.
+          </p>
+
         </div>
       </div>
     </div>

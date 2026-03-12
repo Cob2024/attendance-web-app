@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth, User } from '../context/AuthContext';
-import { X, Save, Loader2 } from 'lucide-react';
+import { X, Save, Loader2, Camera, User as UserIcon } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface EditProfileModalProps {
@@ -19,6 +19,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
   const [studentId, setStudentId] = useState('');
   const [course, setCourse] = useState('');
   const [level, setLevel] = useState('');
+  const [profilePicture, setProfilePicture] = useState('');
 
   // Populate form when modal opens or user changes
   useEffect(() => {
@@ -28,6 +29,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
       setStudentId(user.studentId || '');
       setCourse(user.course || '');
       setLevel(user.level || '');
+      setProfilePicture(user.profilePicture || '');
       setError('');
     }
   }, [user, isOpen]);
@@ -46,9 +48,12 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
 
     setLoading(true);
 
-    const updates: any = { name, email };
+    const updates: any = { profilePicture };
+    if (user?.role === 'lecturer') {
+      updates.name = name;
+    }
+    updates.email = email;
     if (user?.role === 'student') {
-      updates.studentId = studentId;
       updates.course = course;
       updates.level = level;
     }
@@ -89,19 +94,59 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
           </div>
         )}
 
+        {/* Profile Picture */}
+        <div className="flex flex-col items-center mb-6">
+          <div className="relative group cursor-pointer">
+            {profilePicture ? (
+              <img
+                src={profilePicture}
+                alt="Profile Preview"
+                className="w-24 h-24 rounded-full object-cover border-2 border-gray-200"
+              />
+            ) : (
+              <div className="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center border-2 border-dashed border-gray-300">
+                <UserIcon className="w-10 h-10 text-gray-400" />
+              </div>
+            )}
+            <div className="absolute inset-0 bg-black bg-opacity-40 rounded-full flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <Camera className="w-6 h-6 text-white mb-1" />
+              <span className="text-white text-xs font-medium">Change</span>
+            </div>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  const reader = new FileReader();
+                  reader.onloadend = () => {
+                    setProfilePicture(reader.result as string);
+                  };
+                  reader.readAsDataURL(file);
+                }
+              }}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            />
+          </div>
+        </div>
+
         {/* Form */}
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Full Name <span className="text-red-500">*</span>
+              Full Name {user?.role === 'lecturer' && <span className="text-red-500">*</span>}
             </label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ttu-navy focus:border-transparent"
+              disabled={user?.role === 'student'}
+              className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ttu-navy focus:border-transparent ${user?.role === 'student' ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
               placeholder="Enter your full name"
             />
+            {user?.role === 'student' && (
+              <p className="text-xs text-gray-400 mt-1">Contact an administrator to change your name</p>
+            )}
           </div>
 
           <div>
@@ -126,15 +171,16 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
                 <input
                   type="text"
                   value={studentId}
-                  onChange={(e) => setStudentId(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ttu-navy focus:border-transparent"
+                  disabled
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
                   placeholder="e.g., BC/GRD/22/118"
                 />
+                <p className="text-xs text-gray-400 mt-1">Contact an administrator to change your Student ID</p>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Course / Programme
+                  Programme
                 </label>
                 <input
                   type="text"

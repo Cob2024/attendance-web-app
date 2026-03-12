@@ -9,6 +9,7 @@ export interface User {
   studentId?: string;
   course?: string;
   level?: string;
+  profilePicture?: string;
 }
 
 interface AuthContextType {
@@ -23,7 +24,7 @@ interface AuthContextType {
     course?: string,
     level?: string
   ) => Promise<{ success: boolean; error?: string }>;
-  updateProfile: (updates: { name?: string; email?: string; studentId?: string; course?: string; level?: string }) => Promise<{ success: boolean; error?: string }>;
+  updateProfile: (updates: { name?: string; email?: string; studentId?: string; course?: string; level?: string; profilePicture?: string }) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -85,7 +86,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const updateProfile = async (updates: { name?: string; email?: string; studentId?: string; course?: string; level?: string }): Promise<{ success: boolean; error?: string }> => {
+  const updateProfile = async (updates: { name?: string; email?: string; studentId?: string; course?: string; level?: string; profilePicture?: string }): Promise<{ success: boolean; error?: string }> => {
     if (!user) return { success: false, error: 'Not authenticated' };
     try {
       const result = updateUserProfile(user.id, updates);

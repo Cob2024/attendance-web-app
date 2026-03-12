@@ -459,6 +459,7 @@ export const updateUserProfile = (
     studentId?: string;
     course?: string;
     level?: string;
+    profilePicture?: string;
   }
 ) => {
   const users = JSON.parse(localStorage.getItem('users') || '[]');
@@ -506,6 +507,7 @@ export const updateUserProfile = (
   if (updates.studentId !== undefined) users[userIndex].studentId = updates.studentId.trim();
   if (updates.course !== undefined) users[userIndex].course = updates.course.trim();
   if (updates.level !== undefined) users[userIndex].level = updates.level.trim();
+  if (updates.profilePicture !== undefined) users[userIndex].profilePicture = updates.profilePicture;
 
   localStorage.setItem('users', JSON.stringify(users));
 

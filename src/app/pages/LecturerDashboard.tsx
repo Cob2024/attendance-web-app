@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useLocation, useNavigate } from 'react-router';
 import { Sidebar } from '../components/Sidebar';
 import {
   getLecturerCourses,
@@ -23,6 +24,7 @@ import {
   Filter,
   Calendar,
   Key,
+  QrCode,
   Copy,
   XCircle,
   UserPlus,
@@ -31,15 +33,21 @@ import {
   Clock,
   Menu,
   Pencil,
-  Mail
+  Mail,
+  Eye,
+  ArrowLeft
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { QRCodeSVG } from 'qrcode.react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { toast } from 'sonner';
 
 export const LecturerDashboard: React.FC = () => {
   const { user } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isClassesView = location.pathname.startsWith('/lecturer/classes');
   const [courses, setCourses] = useState<any[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<any>(null);
   const [attendanceRecords, setAttendanceRecords] = useState<any[]>([]);
@@ -227,6 +235,176 @@ export const LecturerDashboard: React.FC = () => {
 
       <div className="flex-1 overflow-auto">
         <div className="p-4 lg:p-8">
+
+          {/* ===== MY CLASSES VIEW ===== */}
+          {isClassesView ? (
+            <>
+              {/* Header */}
+              <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 mb-6 lg:mb-8">
+                <div>
+                  <div className="flex items-center gap-3 mb-2">
+                    <button
+                      onClick={() => setSidebarOpen(true)}
+                      className="lg:hidden p-2 rounded-lg hover:bg-gray-200 transition-colors"
+                      aria-label="Open menu"
+                    >
+                      <Menu className="w-6 h-6 text-gray-700" />
+                    </button>
+                    <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">My Classes</h1>
+                  </div>
+                  <p className="text-gray-600 ml-11 lg:ml-0">All your courses and classes at a glance</p>
+                </div>
+                <button
+                  onClick={() => setShowCreateCourse(true)}
+                  className="px-4 py-2 bg-ttu-navy text-white rounded-lg font-medium hover:bg-ttu-navy-dark transition-colors flex items-center justify-center gap-2 ml-11 lg:ml-0 self-start"
+                >
+                  <Plus className="w-5 h-5" />
+                  Create New Course
+                </button>
+              </div>
+
+              {/* Course Cards Grid */}
+              {courses.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
+                  {courses.map((course) => {
+                    const courseStats = getAttendanceStats(course.id);
+                    const students = getCourseStudents(course.id);
+                    const code = getActiveCode(course.id);
+
+                    return (
+                      <div
+                        key={course.id}
+                        className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
+                      >
+                        {/* Card Header */}
+                        <div className="bg-gradient-to-r from-ttu-navy to-ttu-navy-dark p-4 lg:p-5">
+                          <h3 className="font-semibold text-white text-lg mb-1 truncate">{course.courseName}</h3>
+                          <p className="text-white/70 text-sm font-mono">{course.courseCode}</p>
+                          {code && (
+                            <div className="mt-2 inline-flex items-center gap-1.5 bg-white/20 px-2.5 py-1 rounded-lg">
+                              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                              <span className="text-white/90 text-xs font-medium">Live Session</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Card Body */}
+                        <div className="p-4 lg:p-5">
+                          {/* Stats Row */}
+                          <div className="grid grid-cols-3 gap-3 mb-4">
+                            <div className="text-center">
+                              <p className="text-lg font-bold text-gray-900">{students.length}</p>
+                              <p className="text-xs text-gray-500">Students</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-lg font-bold text-gray-900">{courseStats.totalSessions}</p>
+                              <p className="text-xs text-gray-500">Sessions</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-lg font-bold text-gray-900">{courseStats.averageAttendance?.toFixed(0) || 0}%</p>
+                              <p className="text-xs text-gray-500">Avg. Att.</p>
+                            </div>
+                          </div>
+
+                          {/* Attendance Progress Bar */}
+                          <div className="mb-4">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-xs text-gray-500">Average Attendance</span>
+                              <span className="text-xs font-semibold text-gray-700">{courseStats.averageAttendance?.toFixed(1) || 0}%</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div
+                                className="bg-ttu-navy h-2 rounded-full transition-all"
+                                style={{ width: `${Math.min(courseStats.averageAttendance || 0, 100)}%` }}
+                              ></div>
+                            </div>
+                          </div>
+
+                          {/* Action Button */}
+                          <button
+                            onClick={() => {
+                              setSelectedCourse(course);
+                              navigate('/lecturer');
+                            }}
+                            className="w-full px-4 py-2 bg-ttu-navy-50 text-ttu-navy rounded-lg font-medium hover:bg-ttu-navy-100 transition-colors flex items-center justify-center gap-2 text-sm"
+                          >
+                            <Eye className="w-4 h-4" />
+                            View Dashboard
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+                  <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No Classes Yet</h3>
+                  <p className="text-gray-500 mb-6">Create your first course to get started</p>
+                  <button
+                    onClick={() => setShowCreateCourse(true)}
+                    className="px-6 py-2.5 bg-ttu-navy text-white rounded-lg font-medium hover:bg-ttu-navy-dark transition-colors inline-flex items-center gap-2"
+                  >
+                    <Plus className="w-5 h-5" />
+                    Create Course
+                  </button>
+                </div>
+              )}
+
+              {/* Create Course Modal (shared) */}
+              {showCreateCourse && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                  <div className="bg-white rounded-xl p-6 max-w-md w-full">
+                    <h3 className="text-xl font-semibold text-gray-900 mb-4">Create New Course</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Course Name</label>
+                        <input
+                          type="text"
+                          value={newCourseName}
+                          onChange={(e) => setNewCourseName(e.target.value)}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ttu-navy focus:border-transparent"
+                          placeholder="e.g., Machine Learning"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Course Code</label>
+                        <input
+                          type="text"
+                          value={newCourseCode}
+                          onChange={(e) => setNewCourseCode(e.target.value)}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ttu-navy focus:border-transparent"
+                          placeholder="e.g., CS401"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex gap-3 mt-6">
+                      <button
+                        onClick={() => setShowCreateCourse(false)}
+                        className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleCreateCourse}
+                        className="flex-1 px-4 py-2 bg-ttu-navy text-white rounded-lg font-medium hover:bg-ttu-navy-dark transition-colors"
+                      >
+                        Create
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Edit Profile Modal */}
+              <EditProfileModal
+                isOpen={showEditProfile}
+                onClose={() => setShowEditProfile(false)}
+              />
+            </>
+          ) : (
+            <>
+          {/* ===== DASHBOARD VIEW ===== */}
           {/* Header */}
           <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 mb-6 lg:mb-8">
             <div>
@@ -239,7 +417,9 @@ export const LecturerDashboard: React.FC = () => {
                 >
                   <Menu className="w-6 h-6 text-gray-700" />
                 </button>
-                <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Lecturer Dashboard</h1>
+                <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">
+                  Welcome back, {user?.name}!
+                </h1>
               </div>
               <p className="text-gray-600 ml-11 lg:ml-0">Manage courses and track student attendance</p>
             </div>
@@ -280,9 +460,13 @@ export const LecturerDashboard: React.FC = () => {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-ttu-navy-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Users className="w-5 h-5 text-ttu-navy" />
-                </div>
+                {user?.profilePicture ? (
+                  <img src={user.profilePicture} alt={user.name} className="w-10 h-10 rounded-lg object-cover flex-shrink-0 bg-gray-100" />
+                ) : (
+                  <div className="w-10 h-10 bg-ttu-navy-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Users className="w-5 h-5 text-ttu-navy" />
+                  </div>
+                )}
                 <div className="min-w-0">
                   <p className="text-sm text-gray-500">Name</p>
                   <p className="font-medium text-gray-900 truncate">{user?.name}</p>
@@ -380,8 +564,8 @@ export const LecturerDashboard: React.FC = () => {
                   disabled={!selectedCourse || !!activeCode}
                   className="px-4 py-2 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Key className="w-5 h-5" />
-                  Generate Code
+                  <QrCode className="w-5 h-5" />
+                  Generate QR Code
                 </button>
                 <button
                   onClick={() => setShowCreateCourse(true)}
@@ -397,29 +581,32 @@ export const LecturerDashboard: React.FC = () => {
           {/* Active Attendance Code Display */}
           {activeCode && (
             <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl shadow-lg p-4 lg:p-6 mb-6 lg:mb-8 text-white">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <p className="text-emerald-100 text-sm font-medium mb-1">Active Attendance Code</p>
-                  <p className="text-xs text-emerald-200 mb-3">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+                <div className="flex flex-col items-center sm:items-start">
+                  <p className="text-emerald-100 text-sm font-medium mb-1">Active Attendance QR Code</p>
+                  <p className="text-xs text-emerald-200 mb-4">
                     {selectedCourse?.courseName} ({selectedCourse?.courseCode})
                   </p>
-                  <div className="flex items-center gap-4">
-                    <span className="text-2xl lg:text-4xl font-mono font-bold tracking-[0.2em] lg:tracking-[0.3em] bg-white/20 px-4 lg:px-6 py-2 lg:py-3 rounded-xl">
-                      {activeCode.code}
-                    </span>
+                  <div className="bg-white p-4 rounded-xl shadow-lg">
+                    <QRCodeSVG
+                      value={JSON.stringify({
+                        code: activeCode.code,
+                        courseId: activeCode.courseId,
+                        ts: activeCode.createdAt
+                      })}
+                      size={200}
+                      level="H"
+                      includeMargin={true}
+                    />
                   </div>
                   <p className="text-xs text-emerald-200 mt-3">
                     Generated at {new Date(activeCode.createdAt).toLocaleTimeString()}
                   </p>
+                  <p className="text-xs text-emerald-100/50 mt-1 font-mono">
+                    Code: {activeCode.code}
+                  </p>
                 </div>
                 <div className="flex sm:flex-col gap-2">
-                  <button
-                    onClick={handleCopyCode}
-                    className="flex-1 sm:flex-initial px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2 backdrop-blur-sm"
-                  >
-                    <Copy className="w-4 h-4" />
-                    Copy Code
-                  </button>
                   <button
                     onClick={handleDeactivateCode}
                     className="flex-1 sm:flex-initial px-4 py-2 bg-red-500/80 hover:bg-red-500 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
@@ -835,6 +1022,8 @@ export const LecturerDashboard: React.FC = () => {
             isOpen={showEditProfile}
             onClose={() => setShowEditProfile(false)}
           />
+          </>
+          )}
         </div>
       </div>
     </div>
