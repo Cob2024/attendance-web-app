@@ -370,6 +370,29 @@ export const createCourse = (courseName: string, courseCode: string, lecturerId:
   return { success: true, course: newCourse };
 };
 
+// Delete a course
+export const deleteCourse = (courseId: string) => {
+  const courses = JSON.parse(localStorage.getItem('courses') || '[]');
+  const enrollments = JSON.parse(localStorage.getItem('enrollments') || '[]');
+  const attendance = JSON.parse(localStorage.getItem('attendance') || '[]');
+  const attendanceCodes = JSON.parse(localStorage.getItem('attendanceCodes') || '[]');
+
+  // Filter out the course
+  const updatedCourses = courses.filter((c: any) => c.id !== courseId);
+  
+  // Filter out related records
+  const updatedEnrollments = enrollments.filter((e: any) => e.courseId !== courseId);
+  const updatedAttendance = attendance.filter((a: any) => a.courseId !== courseId);
+  const updatedCodes = attendanceCodes.filter((c: any) => c.courseId !== courseId);
+
+  localStorage.setItem('courses', JSON.stringify(updatedCourses));
+  localStorage.setItem('enrollments', JSON.stringify(updatedEnrollments));
+  localStorage.setItem('attendance', JSON.stringify(updatedAttendance));
+  localStorage.setItem('attendanceCodes', JSON.stringify(updatedCodes));
+
+  return { success: true };
+};
+
 // Get attendance statistics
 export const getAttendanceStats = (courseId: string) => {
   const attendance = JSON.parse(localStorage.getItem('attendance') || '[]');

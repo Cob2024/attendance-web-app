@@ -11,7 +11,8 @@ import {
   generateAttendanceCode,
   getActiveCode,
   deactivateCode,
-  enrollStudent
+  enrollStudent,
+  deleteCourse
 } from '../services/mockData';
 import { EditProfileModal } from '../components/EditProfileModal';
 import {
@@ -35,7 +36,8 @@ import {
   Pencil,
   Mail,
   Eye,
-  ArrowLeft
+  ArrowLeft,
+  Trash2
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { QRCodeSVG } from 'qrcode.react';
@@ -149,6 +151,22 @@ export const LecturerDashboard: React.FC = () => {
       setShowAddStudent(false);
     } else {
       toast.error(result.error || 'Failed to enroll student');
+    }
+  };
+
+  const handleDeleteCourse = (courseId: string) => {
+    if (window.confirm('Are you sure you want to delete this course? This action cannot be undone and will remove all attendance records for it.')) {
+      const result = deleteCourse(courseId);
+      if (result.success) {
+        toast.success('Course deleted successfully');
+        const updatedCourses = getLecturerCourses(user?.id || '');
+        setCourses(updatedCourses);
+        if (selectedCourse?.id === courseId) {
+          setSelectedCourse(updatedCourses.length > 0 ? updatedCourses[0] : null);
+        }
+      } else {
+        toast.error('Failed to delete course');
+      }
     }
   };
 
@@ -277,9 +295,23 @@ export const LecturerDashboard: React.FC = () => {
                         className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
                       >
                         {/* Card Header */}
-                        <div className="bg-gradient-to-r from-ttu-navy to-ttu-navy-dark p-4 lg:p-5">
-                          <h3 className="font-semibold text-white text-lg mb-1 truncate">{course.courseName}</h3>
-                          <p className="text-white/70 text-sm font-mono">{course.courseCode}</p>
+                        <div className="bg-gradient-to-r from-ttu-navy to-ttu-navy-dark p-4 lg:p-5 relative group">
+                          <div className="pr-8">
+                            <h3 className="font-semibold text-white text-lg mb-1 truncate">{course.courseName}</h3>
+                            <p className="text-white/70 text-sm font-mono">{course.courseCode}</p>
+                          </div>
+                          
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteCourse(course.id);
+                            }}
+                            className="absolute top-4 right-4 p-2 text-white/70 hover:text-red-400 hover:bg-black/20 rounded-lg opacity-0 group-hover:opacity-100 transition-all focus:opacity-100"
+                            aria-label="Delete course"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+
                           {code && (
                             <div className="mt-2 inline-flex items-center gap-1.5 bg-white/20 px-2.5 py-1 rounded-lg">
                               <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
