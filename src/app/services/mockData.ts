@@ -449,3 +449,66 @@ export const registerUser = (
   const { password: _, ...userWithoutPassword } = newUser;
   return { success: true, user: userWithoutPassword };
 };
+
+// Update an existing user's profile
+export const updateUserProfile = (
+  userId: string,
+  updates: {
+    name?: string;
+    email?: string;
+    studentId?: string;
+    course?: string;
+    level?: string;
+  }
+) => {
+  const users = JSON.parse(localStorage.getItem('users') || '[]');
+  const userIndex = users.findIndex((u: any) => u.id === userId);
+
+  if (userIndex === -1) {
+    return { success: false, error: 'User not found' };
+  }
+
+  const currentUser = users[userIndex];
+
+  // Validate name is not empty
+  if (updates.name !== undefined && !updates.name.trim()) {
+    return { success: false, error: 'Name cannot be empty' };
+  }
+
+  // Validate email is not empty
+  if (updates.email !== undefined && !updates.email.trim()) {
+    return { success: false, error: 'Email cannot be empty' };
+  }
+
+  // Check if updated email + role conflicts with another user
+  if (updates.email && updates.email !== currentUser.email) {
+    const emailConflict = users.find(
+      (u: any) => u.id !== userId && u.email === updates.email && u.role === currentUser.role
+    );
+    if (emailConflict) {
+      return { success: false, error: 'An account with this email already exists' };
+    }
+  }
+
+  // For students, check if updated studentId conflicts with another user
+  if (currentUser.role === 'student' && updates.studentId && updates.studentId !== currentUser.studentId) {
+    const idConflict = users.find(
+      (u: any) => u.id !== userId && u.studentId === updates.studentId
+    );
+    if (idConflict) {
+      return { success: false, error: 'This Student ID is already registered' };
+    }
+  }
+
+  // Apply updates
+  if (updates.name) users[userIndex].name = updates.name.trim();
+  if (updates.email) users[userIndex].email = updates.email.trim();
+  if (updates.studentId !== undefined) users[userIndex].studentId = updates.studentId.trim();
+  if (updates.course !== undefined) users[userIndex].course = updates.course.trim();
+  if (updates.level !== undefined) users[userIndex].level = updates.level.trim();
+
+  localStorage.setItem('users', JSON.stringify(users));
+
+  const { password: _pw, ...updatedUserWithoutPassword } = users[userIndex];
+  return { success: true, user: updatedUserWithoutPassword };
+};

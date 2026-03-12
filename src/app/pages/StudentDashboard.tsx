@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Sidebar } from '../components/Sidebar';
+import { EditProfileModal } from '../components/EditProfileModal';
 import { getStudentCourses, markAttendance, getStudentAttendance } from '../services/mockData';
-import { CheckCircle, Clock, BookOpen, User, IdCard, GraduationCap, KeyRound, Menu } from 'lucide-react';
+import { CheckCircle, Clock, BookOpen, User, IdCard, GraduationCap, KeyRound, Menu, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 
 export const StudentDashboard: React.FC = () => {
@@ -13,6 +14,7 @@ export const StudentDashboard: React.FC = () => {
   const [attendanceCode, setAttendanceCode] = useState('');
   const [codeInputCourse, setCodeInputCourse] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showEditProfile, setShowEditProfile] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -84,7 +86,16 @@ export const StudentDashboard: React.FC = () => {
 
           {/* Profile Card */}
           <div className="bg-white rounded-xl shadow-sm p-4 lg:p-6 mb-6 lg:mb-8 border border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Student Profile</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">Student Profile</h2>
+              <button
+                onClick={() => setShowEditProfile(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-ttu-navy bg-ttu-navy-50 rounded-lg hover:bg-ttu-navy-100 transition-colors"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+                Edit Profile
+              </button>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-ttu-navy-50 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -276,6 +287,12 @@ export const StudentDashboard: React.FC = () => {
               )}
             </div>
           </div>
+
+          {/* Edit Profile Modal */}
+          <EditProfileModal
+            isOpen={showEditProfile}
+            onClose={() => setShowEditProfile(false)}
+          />
         </div>
       </div>
     </div>

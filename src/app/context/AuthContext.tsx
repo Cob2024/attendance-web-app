@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { registerUser } from '../services/mockData';
+import { registerUser, updateUserProfile } from '../services/mockData';
 
 export interface User {
   id: string;
@@ -23,6 +23,7 @@ interface AuthContextType {
     course?: string,
     level?: string
   ) => Promise<{ success: boolean; error?: string }>;
+  updateProfile: (updates: { name?: string; email?: string; studentId?: string; course?: string; level?: string }) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -84,13 +85,28 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const updateProfile = async (updates: { name?: string; email?: string; studentId?: string; course?: string; level?: string }): Promise<{ success: boolean; error?: string }> => {
+    if (!user) return { success: false, error: 'Not authenticated' };
+    try {
+      const result = updateUserProfile(user.id, updates);
+      if (result.success && result.user) {
+        setUser(result.user);
+        localStorage.setItem('currentUser', JSON.stringify(result.user));
+        return { success: true };
+      }
+      return { success: false, error: result.error };
+    } catch (error) {
+      return { success: false, error: 'Failed to update profile' };
+    }
+  };
+
   const logout = () => {
     setUser(null);
     localStorage.removeItem('currentUser');
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, signup, logout, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, login, signup, updateProfile, logout, isAuthenticated: !!user }}>
       {children}
     </AuthContext.Provider>
   );

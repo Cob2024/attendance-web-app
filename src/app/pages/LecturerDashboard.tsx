@@ -12,6 +12,7 @@ import {
   deactivateCode,
   enrollStudent
 } from '../services/mockData';
+import { EditProfileModal } from '../components/EditProfileModal';
 import {
   BookOpen,
   Users,
@@ -28,7 +29,9 @@ import {
   UserX,
   UserCheck,
   Clock,
-  Menu
+  Menu,
+  Pencil,
+  Mail
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import jsPDF from 'jspdf';
@@ -53,6 +56,7 @@ export const LecturerDashboard: React.FC = () => {
   const [newStudentId, setNewStudentId] = useState('');
   const [summaryDate, setSummaryDate] = useState(new Date().toISOString().split('T')[0]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showEditProfile, setShowEditProfile] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -260,6 +264,40 @@ export const LecturerDashboard: React.FC = () => {
                 </select>
               </div>
             )}
+          </div>
+
+          {/* Lecturer Profile Card */}
+          <div className="bg-white rounded-xl shadow-sm p-4 lg:p-6 mb-6 lg:mb-8 border border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">Lecturer Profile</h2>
+              <button
+                onClick={() => setShowEditProfile(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-ttu-navy bg-ttu-navy-50 rounded-lg hover:bg-ttu-navy-100 transition-colors"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+                Edit Profile
+              </button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-ttu-navy-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Users className="w-5 h-5 text-ttu-navy" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm text-gray-500">Name</p>
+                  <p className="font-medium text-gray-900 truncate">{user?.name}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Mail className="w-5 h-5 text-green-600" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm text-gray-500">Email</p>
+                  <p className="font-medium text-gray-900 truncate">{user?.email}</p>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Stats Cards */}
@@ -791,6 +829,12 @@ export const LecturerDashboard: React.FC = () => {
               </div>
             )}
           </div>
+
+          {/* Edit Profile Modal */}
+          <EditProfileModal
+            isOpen={showEditProfile}
+            onClose={() => setShowEditProfile(false)}
+          />
         </div>
       </div>
     </div>
