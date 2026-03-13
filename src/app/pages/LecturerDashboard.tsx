@@ -39,8 +39,9 @@ import {
   ArrowLeft,
   Trash2
 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
 import { QRCodeSVG } from 'qrcode.react';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '../components/ui/chart';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { toast } from 'sonner';
@@ -227,15 +228,38 @@ export const LecturerDashboard: React.FC = () => {
   const getChartData = () => {
     // Group by date and count attendances
     const dateMap = new Map();
+    
+    // Pre-fill last 7 days with 0 attendance
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      dateMap.set(dateStr, 0);
+    }
+
     attendanceRecords.forEach(record => {
       const date = new Date(record.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      dateMap.set(date, (dateMap.get(date) || 0) + 1);
+      if (dateMap.has(date)) {
+        dateMap.set(date, dateMap.get(date) + 1);
+      }
     });
 
-    return Array.from(dateMap.entries()).map(([date, count]) => ({
+    const realData = Array.from(dateMap.entries()).map(([date, count]) => ({
       date,
       attendance: count
-    })).slice(-7); // Last 7 days
+    }));
+
+    // If all values are 0, show sample trend data so chart is never empty
+    const hasRealData = realData.some(d => d.attendance > 0);
+    if (!hasRealData && courseStudents.length > 0) {
+      const totalStudents = courseStudents.length;
+      return realData.map((d, i) => ({
+        ...d,
+        attendance: Math.max(1, Math.round(totalStudents * [0.65, 0.80, 0.45, 0.90, 0.70, 0.85, 0.75][i]))
+      }));
+    }
+
+    return realData;
   };
 
   const filteredRecords = attendanceRecords.filter(record => {
@@ -700,19 +724,55 @@ export const LecturerDashboard: React.FC = () => {
             </div>
           )}
 
-          {/* Attendance Chart */}
-          {getChartData().length > 0 && (
+          {/* Attendance Chart — always visible */}
+          {selectedCourse && (
             <div className="bg-white rounded-xl shadow-sm p-4 lg:p-6 mb-6 lg:mb-8 border border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Attendance Trend (Last 7 Days)</h2>
-              <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={getChartData()}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} />
-                  <Tooltip />
-                  <Bar dataKey="attendance" fill="#1B2A5B" radius={[8, 8, 0, 0]} />
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">Attendance Trend (Last 7 Days)</h2>
+                {!attendanceRecords.some(r => {
+                  const d = new Date(r.date);
+                  const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
+                  return d >= weekAgo;
+                }) && (
+                  <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-full">Sample Data</span>
+                )}
+              </div>
+              <ChartContainer 
+                config={{
+                  attendance: {
+                    label: "Attendance",
+                    color: "#1B2A5B",
+                  }
+                }}
+                className="w-full h-[250px]"
+              >
+                <BarChart data={getChartData()} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis 
+                    dataKey="date" 
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fontSize: 12 }} 
+                    tickMargin={10}
+                  />
+                  <YAxis 
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fontSize: 12 }} 
+                    allowDecimals={false}
+                  />
+                  <ChartTooltip 
+                    cursor={false} 
+                    content={<ChartTooltipContent indicator="line" />}
+                  />
+                  <Bar 
+                    dataKey="attendance" 
+                    fill="var(--color-attendance)" 
+                    radius={[4, 4, 0, 0]} 
+                    maxBarSize={40}
+                  />
                 </BarChart>
-              </ResponsiveContainer>
+              </ChartContainer>
             </div>
           )}
 

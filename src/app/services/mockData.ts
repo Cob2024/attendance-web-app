@@ -1,5 +1,27 @@
 // Initialize mock database in localStorage
 export const initializeMockData = () => {
+  // Force patch for lecturer l1 to ensure updates reflect even if already initialized
+  try {
+    const storedUsers = JSON.parse(localStorage.getItem('users') || '[]');
+    const l1Index = storedUsers.findIndex((u: any) => u.id === 'l1');
+    if (l1Index !== -1) {
+      let updated = false;
+      if (storedUsers[l1Index].name !== 'Mr. Ernest Kudordjie') {
+        storedUsers[l1Index].name = 'Mr. Ernest Kudordjie';
+        updated = true;
+      }
+      if (storedUsers[l1Index].email !== 'Ernest.kudordjie@ttu.edu.gh') {
+        storedUsers[l1Index].email = 'Ernest.kudordjie@ttu.edu.gh';
+        updated = true;
+      }
+      if (updated) {
+        localStorage.setItem('users', JSON.stringify(storedUsers));
+      }
+    }
+  } catch (e) {
+    console.error("Failed to patch mock data", e);
+  }
+
   if (!localStorage.getItem('initialized')) {
     // Users (students and lecturers)
     const users = [
@@ -47,8 +69,8 @@ export const initializeMockData = () => {
       // Lecturers
       {
         id: 'l1',
-        name: 'Mr. Patrick Edu Bempah',
-        email: 'lecturer@ttu.edu.gh',
+        name: 'Mr. Ernest Kudordjie',
+        email: 'Ernest.kudordjie@ttu.edu.gh',
         password: 'lecturer123',
         role: 'lecturer'
       },
@@ -379,7 +401,7 @@ export const deleteCourse = (courseId: string) => {
 
   // Filter out the course
   const updatedCourses = courses.filter((c: any) => c.id !== courseId);
-  
+
   // Filter out related records
   const updatedEnrollments = enrollments.filter((e: any) => e.courseId !== courseId);
   const updatedAttendance = attendance.filter((a: any) => a.courseId !== courseId);
