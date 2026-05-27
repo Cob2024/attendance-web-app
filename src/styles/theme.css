@@ -127,6 +127,8 @@
   --color-ttu-red: #C41E3A;
   --color-ttu-navy-50: #EEF0F7;
   --color-ttu-navy-100: #D5D9E8;
+
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
 }
 
 @layer base {

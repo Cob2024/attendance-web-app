@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLocation, useNavigate } from 'react-router';
 import { Sidebar } from '../components/Sidebar';
@@ -68,6 +68,9 @@ export const LecturerDashboard: React.FC = () => {
   const [summaryDate, setSummaryDate] = useState(new Date().toISOString().split('T')[0]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const refreshData = useCallback(() => setRefreshKey(k => k + 1), []);
 
   useEffect(() => {
     if (user) {
@@ -95,7 +98,7 @@ export const LecturerDashboard: React.FC = () => {
       const code = getActiveCode(selectedCourse.id);
       setActiveCode(code);
     }
-  }, [selectedCourse, startDate, endDate]);
+  }, [selectedCourse, startDate, endDate, refreshKey]);
 
   const handleCreateCourse = () => {
     if (!user || !newCourseName || !newCourseCode) {
@@ -112,6 +115,7 @@ export const LecturerDashboard: React.FC = () => {
       setNewCourseName('');
       setNewCourseCode('');
       setShowCreateCourse(false);
+      refreshData();
     }
   };
 
@@ -149,6 +153,7 @@ export const LecturerDashboard: React.FC = () => {
       const students = getCourseStudents(selectedCourse.id);
       setCourseStudents(students);
       setNewStudentId('');
+      refreshData();
       setShowAddStudent(false);
     } else {
       toast.error(result.error || 'Failed to enroll student');
@@ -165,6 +170,7 @@ export const LecturerDashboard: React.FC = () => {
         if (selectedCourse?.id === courseId) {
           setSelectedCourse(updatedCourses.length > 0 ? updatedCourses[0] : null);
         }
+        refreshData();
       } else {
         toast.error('Failed to delete course');
       }
@@ -409,7 +415,7 @@ export const LecturerDashboard: React.FC = () => {
 
               {/* Create Course Modal (shared) */}
               {showCreateCourse && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
                   <div className="bg-white rounded-xl p-6 max-w-md w-full">
                     <h3 className="text-xl font-semibold text-gray-900 mb-4">Create New Course</h3>
                     <div className="space-y-4">
@@ -677,7 +683,7 @@ export const LecturerDashboard: React.FC = () => {
 
           {/* Create Course Modal */}
           {showCreateCourse && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
               <div className="bg-white rounded-xl p-6 max-w-md w-full">
                 <h3 className="text-xl font-semibold text-gray-900 mb-4">Create New Course</h3>
                 <div className="space-y-4">
@@ -1022,7 +1028,7 @@ export const LecturerDashboard: React.FC = () => {
 
             {/* Add Student Modal */}
             {showAddStudent && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
                 <div className="bg-white rounded-xl p-6 max-w-md w-full">
                   <h3 className="text-xl font-semibold text-gray-900 mb-2">Add Student to Class</h3>
                   <p className="text-sm text-gray-500 mb-4">

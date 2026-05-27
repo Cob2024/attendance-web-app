@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { useAuth } from '../context/AuthContext';
 import { Sidebar } from '../components/Sidebar';
 import { EditProfileModal } from '../components/EditProfileModal';
 import { QRScannerModal } from '../components/QRScannerModal';
-import { getStudentCourses, markAttendance, getStudentAttendance } from '../services/mockData';
+import { getStudentCourses, markAttendance, getStudentAttendance, getCourseAttendance } from '../services/mockData';
 import { CheckCircle, Clock, BookOpen, User, IdCard, GraduationCap, QrCode, Menu, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -51,12 +51,16 @@ export const StudentDashboard: React.FC = () => {
   };
 
   const getAttendancePercentage = (courseId: string) => {
-    const courseAttendances = attendanceHistory.filter(a => a.courseId === courseId);
-    const totalSessions = courseAttendances.length;
-    const presentSessions = courseAttendances.filter(a => a.status === 'present').length;
+    // Get all attendance records for this course (across all students) to find total sessions
+    const allCourseRecords = getCourseAttendance(courseId);
+    const uniqueDates = new Set(allCourseRecords.map((a: any) => a.date));
+    const totalSessions = uniqueDates.size;
 
     if (totalSessions === 0) return 0;
-    return Math.round((presentSessions / totalSessions) * 100);
+
+    // Count how many of those sessions this student attended
+    const studentAttendances = attendanceHistory.filter(a => a.courseId === courseId && a.status === 'present');
+    return Math.round((studentAttendances.length / totalSessions) * 100);
   };
 
   const isTodayMarked = (courseId: string) => {

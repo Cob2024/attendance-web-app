@@ -1,21 +1,36 @@
 // Initialize mock database in localStorage
 export const initializeMockData = () => {
   // Force patch for lecturer l1 to ensure updates reflect even if already initialized
+  // Patch existing stored data to match updated mock user details
   try {
     const storedUsers = JSON.parse(localStorage.getItem('users') || '[]');
-    const l1Index = storedUsers.findIndex((u: any) => u.id === 'l1');
-    if (l1Index !== -1) {
-      let updated = false;
-      if (storedUsers[l1Index].name !== 'Mr. Ernest Kudordjie') {
-        storedUsers[l1Index].name = 'Mr. Ernest Kudordjie';
-        updated = true;
+    const patchMap: Record<string, { name?: string; email?: string }> = {
+      'l1': { name: 'Mr. Ernest Kudordjie', email: 'ernest.kudordjie@ttu.edu.gh' },
+      's1': { email: 'arhinful.emmanuel@ttu.edu.gh' },
+      's2': { email: 'joel.tetteh@ttu.edu.gh' },
+      's3': { email: 'bernard.otupri@ttu.edu.gh' },
+      's4': { email: 'emmanuel.lokko@ttu.edu.gh' },
+      'l2': { email: 'ernest.kudzordzi@ttu.edu.gh' },
+      'l3': { email: 'nduro@ttu.edu.gh' },
+      'l4': { email: 'betty.fanniyan@ttu.edu.gh' },
+    };
+    let updated = false;
+    storedUsers.forEach((u: any) => {
+      const patch = patchMap[u.id];
+      if (patch) {
+        if (patch.name && u.name !== patch.name) { u.name = patch.name; updated = true; }
+        if (patch.email && u.email !== patch.email) { u.email = patch.email; updated = true; }
       }
-      if (storedUsers[l1Index].email !== 'Ernest.kudordjie@ttu.edu.gh') {
-        storedUsers[l1Index].email = 'Ernest.kudordjie@ttu.edu.gh';
-        updated = true;
-      }
-      if (updated) {
-        localStorage.setItem('users', JSON.stringify(storedUsers));
+    });
+    if (updated) {
+      localStorage.setItem('users', JSON.stringify(storedUsers));
+      // Also update currentUser if it's one of the patched users
+      const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
+      if (currentUser && patchMap[currentUser.id]) {
+        const patch = patchMap[currentUser.id];
+        if (patch.name) currentUser.name = patch.name;
+        if (patch.email) currentUser.email = patch.email;
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
       }
     }
   } catch (e) {
@@ -29,7 +44,7 @@ export const initializeMockData = () => {
       {
         id: 's1',
         name: 'Arhinful Emmanuel Kwabena',
-        email: 'student@ttu.edu.gh',
+        email: 'arhinful.emmanuel@ttu.edu.gh',
         password: 'student123',
         role: 'student',
         studentId: 'BC/GRD/22/118',
@@ -39,7 +54,7 @@ export const initializeMockData = () => {
       {
         id: 's2',
         name: 'Joel Teye Tetteh',
-        email: 'student@ttu.edu.gh',
+        email: 'joel.tetteh@ttu.edu.gh',
         password: 'student123',
         role: 'student',
         studentId: 'BC/GRD/22/101',
@@ -49,7 +64,7 @@ export const initializeMockData = () => {
       {
         id: 's3',
         name: 'Bernard Mensah Otupri',
-        email: 'student@ttu.edu.gh',
+        email: 'bernard.otupri@ttu.edu.gh',
         password: 'student123',
         role: 'student',
         studentId: 'BC/GRD/22/149',
@@ -59,7 +74,7 @@ export const initializeMockData = () => {
       {
         id: 's4',
         name: 'Emmanuel Lokko',
-        email: 'student@ttu.edu.gh',
+        email: 'emmanuel.lokko@ttu.edu.gh',
         password: 'student123',
         role: 'student',
         studentId: 'BC/GRD/22/102',
@@ -70,28 +85,28 @@ export const initializeMockData = () => {
       {
         id: 'l1',
         name: 'Mr. Ernest Kudordjie',
-        email: 'Ernest.kudordjie@ttu.edu.gh',
+        email: 'ernest.kudordjie@ttu.edu.gh',
         password: 'lecturer123',
         role: 'lecturer'
       },
       {
         id: 'l2',
         name: 'Mr. Ernest Kudzordzi',
-        email: 'lecturer@ttu.edu.gh',
+        email: 'ernest.kudzordzi@ttu.edu.gh',
         password: 'lecturer123',
         role: 'lecturer'
       },
       {
         id: 'l3',
         name: 'Mr. Nduro',
-        email: 'lecturer@ttu.edu.gh',
+        email: 'nduro@ttu.edu.gh',
         password: 'lecturer123',
         role: 'lecturer'
       },
       {
         id: 'l4',
         name: 'Prof. Betty Fanniyan',
-        email: 'lecturer@ttu.edu.gh',
+        email: 'betty.fanniyan@ttu.edu.gh',
         password: 'lecturer123',
         role: 'lecturer'
       }
