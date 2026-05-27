@@ -30,6 +30,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
     const menuItems = user?.role === 'student' ? [
         { name: 'Dashboard', icon: LayoutDashboard, path: '/student' },
         { name: 'My Courses', icon: BookOpen, path: '/student/courses' },
+    ] : user?.role === 'admin' ? [
+        { name: 'Dashboard', icon: LayoutDashboard, path: '/admin' },
+        { name: 'Courses', icon: BookOpen, path: '/admin/courses' },
+        { name: 'Lecturers', icon: GraduationCap, path: '/admin/lecturers' },
     ] : [
         { name: 'Dashboard', icon: LayoutDashboard, path: '/lecturer' },
         { name: 'My Classes', icon: BookOpen, path: '/lecturer/classes' },

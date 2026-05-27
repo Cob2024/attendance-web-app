@@ -17,7 +17,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [studentId, setStudentId] = useState('');
-  const [course, setCourse] = useState('');
+  const [programme, setProgramme] = useState('');
   const [level, setLevel] = useState('');
   const [profilePicture, setProfilePicture] = useState('');
 
@@ -27,7 +27,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
       setName(user.name || '');
       setEmail(user.email || '');
       setStudentId(user.studentId || '');
-      setCourse(user.course || '');
+      setProgramme(user.programme || '');
       setLevel(user.level || '');
       setProfilePicture(user.profilePicture || '');
       setError('');
@@ -54,7 +54,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
     }
     updates.email = email;
     if (user?.role === 'student') {
-      updates.course = course;
+      updates.programme = programme;
       updates.level = level;
     }
 
@@ -184,8 +184,8 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
                 </label>
                 <input
                   type="text"
-                  value={course}
-                  onChange={(e) => setCourse(e.target.value)}
+                  value={programme}
+                  onChange={(e) => setProgramme(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ttu-navy focus:border-transparent"
                   placeholder="e.g., Graphic Design"
                 />

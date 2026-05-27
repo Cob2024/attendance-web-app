@@ -1,10 +1,41 @@
-// Initialize mock database in localStorage
+// ============================================================
+// Mock Data Service — University Model
+// Courses belong to a programme + level + semester.
+// Admin creates courses and assigns lecturers.
+// Students are auto-enrolled by programme + level matching.
+// ============================================================
+
+export interface CourseData {
+  id: string;
+  courseName: string;
+  courseCode: string;
+  programme: string;
+  level: string;
+  semester: string;
+  lecturerId: string;
+}
+
+// Available programmes and levels
+export const PROGRAMMES = [
+  'Graphic Design',
+  'Fashion Design',
+  'Painting & Sculpture',
+  'Textile Design',
+  'Industrial Art',
+];
+
+export const LEVELS = ['Level 100', 'Level 200', 'Level 300', 'Level 400'];
+
+export const CURRENT_SEMESTER = 'Semester 1, 2025/2026';
+
+// ============================================================
+// Initialize mock database
+// ============================================================
 export const initializeMockData = () => {
-  // Force patch for lecturer l1 to ensure updates reflect even if already initialized
   // Patch existing stored data to match updated mock user details
   try {
     const storedUsers = JSON.parse(localStorage.getItem('users') || '[]');
-    const patchMap: Record<string, { name?: string; email?: string }> = {
+    const patchMap: Record<string, { name?: string; email?: string; role?: string }> = {
       'l1': { name: 'Mr. Ernest Kudordjie', email: 'ernest.kudordjie@ttu.edu.gh' },
       's1': { email: 'arhinful.emmanuel@ttu.edu.gh' },
       's2': { email: 'joel.tetteh@ttu.edu.gh' },
@@ -24,7 +55,6 @@ export const initializeMockData = () => {
     });
     if (updated) {
       localStorage.setItem('users', JSON.stringify(storedUsers));
-      // Also update currentUser if it's one of the patched users
       const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
       if (currentUser && patchMap[currentUser.id]) {
         const patch = patchMap[currentUser.id];
@@ -37,10 +67,47 @@ export const initializeMockData = () => {
     console.error("Failed to patch mock data", e);
   }
 
-  if (!localStorage.getItem('initialized')) {
-    // Users (students and lecturers)
+  // Patch existing courses to add programme/level/semester if missing
+  try {
+    const storedCourses = JSON.parse(localStorage.getItem('courses') || '[]');
+    const coursePatch: Record<string, { programme?: string; level?: string; semester?: string }> = {
+      'c1': { programme: 'Graphic Design', level: 'Level 400', semester: CURRENT_SEMESTER },
+      'c2': { programme: 'Graphic Design', level: 'Level 400', semester: CURRENT_SEMESTER },
+      'c3': { programme: 'Graphic Design', level: 'Level 400', semester: CURRENT_SEMESTER },
+      'c4': { programme: 'Graphic Design', level: 'Level 400', semester: CURRENT_SEMESTER },
+    };
+    let coursesUpdated = false;
+    storedCourses.forEach((c: any) => {
+      const patch = coursePatch[c.id];
+      if (patch) {
+        if (!c.programme) { c.programme = patch.programme; coursesUpdated = true; }
+        if (!c.level) { c.level = patch.level; coursesUpdated = true; }
+        if (!c.semester) { c.semester = patch.semester; coursesUpdated = true; }
+      }
+    });
+    if (coursesUpdated) {
+      localStorage.setItem('courses', JSON.stringify(storedCourses));
+    }
+  } catch (e) {
+    console.error("Failed to patch course data", e);
+  }
+
+  if (!localStorage.getItem('initialized_v2')) {
+    // Clear old data format
+    localStorage.removeItem('initialized');
+    localStorage.removeItem('enrollments');
+
+    // Users (admin, students, lecturers)
     const users = [
-      // Students
+      // Admin
+      {
+        id: 'a1',
+        name: 'System Administrator',
+        email: 'admin@ttu.edu.gh',
+        password: 'admin123',
+        role: 'admin'
+      },
+      // Students — Graphic Design Level 400
       {
         id: 's1',
         name: 'Arhinful Emmanuel Kwabena',
@@ -48,7 +115,7 @@ export const initializeMockData = () => {
         password: 'student123',
         role: 'student',
         studentId: 'BC/GRD/22/118',
-        course: 'Graphic Design',
+        programme: 'Graphic Design',
         level: 'Level 400'
       },
       {
@@ -58,7 +125,7 @@ export const initializeMockData = () => {
         password: 'student123',
         role: 'student',
         studentId: 'BC/GRD/22/101',
-        course: 'Graphic Design',
+        programme: 'Graphic Design',
         level: 'Level 400'
       },
       {
@@ -68,7 +135,7 @@ export const initializeMockData = () => {
         password: 'student123',
         role: 'student',
         studentId: 'BC/GRD/22/149',
-        course: 'Graphic Design',
+        programme: 'Graphic Design',
         level: 'Level 400'
       },
       {
@@ -78,7 +145,18 @@ export const initializeMockData = () => {
         password: 'student123',
         role: 'student',
         studentId: 'BC/GRD/22/102',
-        course: 'Graphic Design',
+        programme: 'Graphic Design',
+        level: 'Level 400'
+      },
+      // A student from a different programme — to test separation
+      {
+        id: 's5',
+        name: 'Abigail Mensah',
+        email: 'abigail.mensah@ttu.edu.gh',
+        password: 'student123',
+        role: 'student',
+        studentId: 'BC/FSD/22/045',
+        programme: 'Fashion Design',
         level: 'Level 400'
       },
       // Lecturers
@@ -112,48 +190,58 @@ export const initializeMockData = () => {
       }
     ];
 
-    // Courses
-    const courses = [
+    // Courses — now linked to programme + level + semester
+    // Assigned to lecturers BY ADMIN (not by lecturers themselves)
+    const courses: CourseData[] = [
       {
         id: 'c1',
         courseName: 'Production Management',
         courseCode: 'GRD301',
+        programme: 'Graphic Design',
+        level: 'Level 400',
+        semester: CURRENT_SEMESTER,
         lecturerId: 'l1'
       },
       {
         id: 'c2',
         courseName: 'Web Design',
         courseCode: 'GRD302',
+        programme: 'Graphic Design',
+        level: 'Level 400',
+        semester: CURRENT_SEMESTER,
         lecturerId: 'l2'
       },
       {
         id: 'c3',
         courseName: 'Seminar in Graphic',
         courseCode: 'GRD303',
+        programme: 'Graphic Design',
+        level: 'Level 400',
+        semester: CURRENT_SEMESTER,
         lecturerId: 'l3'
       },
       {
         id: 'c4',
         courseName: 'Research Methodology',
         courseCode: 'GRD304',
+        programme: 'Graphic Design',
+        level: 'Level 400',
+        semester: CURRENT_SEMESTER,
         lecturerId: 'l4'
+      },
+      // Fashion Design course — only Fashion Design students see this
+      {
+        id: 'c5',
+        courseName: 'Fashion Illustration',
+        courseCode: 'FSD401',
+        programme: 'Fashion Design',
+        level: 'Level 400',
+        semester: CURRENT_SEMESTER,
+        lecturerId: 'l1' // A lecturer can teach across programmes
       }
     ];
 
-    // Enrollments (student-course relationships)
-    const enrollments = [
-      { studentId: 's1', courseId: 'c1' },
-      { studentId: 's1', courseId: 'c2' },
-      { studentId: 's1', courseId: 'c3' },
-      { studentId: 's2', courseId: 'c1' },
-      { studentId: 's2', courseId: 'c3' },
-      { studentId: 's3', courseId: 'c2' },
-      { studentId: 's3', courseId: 'c3' },
-      { studentId: 's4', courseId: 'c1' },
-      { studentId: 's4', courseId: 'c3' }
-    ];
-
-    // Attendance records (some sample data)
+    // Attendance records (sample data)
     const attendance = [
       {
         id: 'a1',
@@ -199,78 +287,41 @@ export const initializeMockData = () => {
 
     localStorage.setItem('users', JSON.stringify(users));
     localStorage.setItem('courses', JSON.stringify(courses));
-    localStorage.setItem('enrollments', JSON.stringify(enrollments));
     localStorage.setItem('attendance', JSON.stringify(attendance));
-    localStorage.setItem('initialized', 'true');
+    localStorage.setItem('initialized_v2', 'true');
   }
 };
 
-// Get all courses for a student
+// ============================================================
+// Student Functions
+// ============================================================
+
+// Get courses for a student — auto-matched by programme + level
 export const getStudentCourses = (studentId: string) => {
-  const enrollments = JSON.parse(localStorage.getItem('enrollments') || '[]');
+  const users = JSON.parse(localStorage.getItem('users') || '[]');
+  const courses = JSON.parse(localStorage.getItem('courses') || '[]');
+  const student = users.find((u: any) => u.id === studentId);
+
+  if (!student) return [];
+
+  // Return courses matching the student's programme and level
+  return courses.filter(
+    (c: any) => c.programme === student.programme && c.level === student.level
+  );
+};
+
+// Get student attendance history
+export const getStudentAttendance = (studentId: string) => {
+  const attendance = JSON.parse(localStorage.getItem('attendance') || '[]');
   const courses = JSON.parse(localStorage.getItem('courses') || '[]');
 
-  const studentEnrollments = enrollments.filter((e: any) => e.studentId === studentId);
-  return studentEnrollments.map((e: any) =>
-    courses.find((c: any) => c.id === e.courseId)
-  ).filter(Boolean);
-};
-
-// Get all courses for a lecturer
-export const getLecturerCourses = (lecturerId: string) => {
-  const courses = JSON.parse(localStorage.getItem('courses') || '[]');
-  return courses.filter((c: any) => c.lecturerId === lecturerId);
-};
-
-// Generate a unique 5-character attendance code for a course
-export const generateAttendanceCode = (courseId: string, lecturerId: string) => {
-  const codes = JSON.parse(localStorage.getItem('attendanceCodes') || '[]');
-
-  // Deactivate any existing active code for this course
-  codes.forEach((c: any) => {
-    if (c.courseId === courseId && c.active) {
-      c.active = false;
-    }
-  });
-
-  // Generate random 5-char alphanumeric code
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Removed confusing chars (0/O, 1/I)
-  let code = '';
-  for (let i = 0; i < 5; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-
-  const newCode = {
-    id: `code${Date.now()}`,
-    courseId,
-    lecturerId,
-    code,
-    active: true,
-    createdAt: new Date().toISOString()
-  };
-
-  codes.push(newCode);
-  localStorage.setItem('attendanceCodes', JSON.stringify(codes));
-
-  return newCode;
-};
-
-// Get the currently active attendance code for a course
-export const getActiveCode = (courseId: string) => {
-  const codes = JSON.parse(localStorage.getItem('attendanceCodes') || '[]');
-  return codes.find((c: any) => c.courseId === courseId && c.active) || null;
-};
-
-// Deactivate the active code for a course
-export const deactivateCode = (courseId: string) => {
-  const codes = JSON.parse(localStorage.getItem('attendanceCodes') || '[]');
-  codes.forEach((c: any) => {
-    if (c.courseId === courseId && c.active) {
-      c.active = false;
-    }
-  });
-  localStorage.setItem('attendanceCodes', JSON.stringify(codes));
-  return { success: true };
+  return attendance
+    .filter((a: any) => a.studentId === studentId)
+    .map((a: any) => ({
+      ...a,
+      course: courses.find((c: any) => c.id === a.courseId)
+    }))
+    .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
 };
 
 // Mark attendance (requires a valid attendance code)
@@ -311,18 +362,65 @@ export const markAttendance = (studentId: string, courseId: string, code: string
   return { success: true };
 };
 
-// Get student attendance history
-export const getStudentAttendance = (studentId: string) => {
-  const attendance = JSON.parse(localStorage.getItem('attendance') || '[]');
-  const courses = JSON.parse(localStorage.getItem('courses') || '[]');
+// ============================================================
+// Lecturer Functions
+// ============================================================
 
-  return attendance
-    .filter((a: any) => a.studentId === studentId)
-    .map((a: any) => ({
-      ...a,
-      course: courses.find((c: any) => c.id === a.courseId)
-    }))
-    .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+// Get all courses assigned to a lecturer
+export const getLecturerCourses = (lecturerId: string) => {
+  const courses = JSON.parse(localStorage.getItem('courses') || '[]');
+  return courses.filter((c: any) => c.lecturerId === lecturerId);
+};
+
+// Generate a unique 5-character attendance code for a course
+export const generateAttendanceCode = (courseId: string, lecturerId: string) => {
+  const codes = JSON.parse(localStorage.getItem('attendanceCodes') || '[]');
+
+  // Deactivate any existing active code for this course
+  codes.forEach((c: any) => {
+    if (c.courseId === courseId && c.active) {
+      c.active = false;
+    }
+  });
+
+  // Generate random 5-char alphanumeric code
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 5; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+
+  const newCode = {
+    id: `code${Date.now()}`,
+    courseId,
+    lecturerId,
+    code,
+    active: true,
+    createdAt: new Date().toISOString()
+  };
+
+  codes.push(newCode);
+  localStorage.setItem('attendanceCodes', JSON.stringify(codes));
+
+  return newCode;
+};
+
+// Get the currently active attendance code for a course
+export const getActiveCode = (courseId: string) => {
+  const codes = JSON.parse(localStorage.getItem('attendanceCodes') || '[]');
+  return codes.find((c: any) => c.courseId === courseId && c.active) || null;
+};
+
+// Deactivate the active code for a course
+export const deactivateCode = (courseId: string) => {
+  const codes = JSON.parse(localStorage.getItem('attendanceCodes') || '[]');
+  codes.forEach((c: any) => {
+    if (c.courseId === courseId && c.active) {
+      c.active = false;
+    }
+  });
+  localStorage.setItem('attendanceCodes', JSON.stringify(codes));
+  return { success: true };
 };
 
 // Get attendance for a course
@@ -345,98 +443,30 @@ export const getCourseAttendance = (courseId: string, startDate?: string, endDat
   }));
 };
 
-// Get enrolled students for a course
+// Get students enrolled in a course — by programme + level matching
 export const getCourseStudents = (courseId: string) => {
-  const enrollments = JSON.parse(localStorage.getItem('enrollments') || '[]');
+  const courses = JSON.parse(localStorage.getItem('courses') || '[]');
   const users = JSON.parse(localStorage.getItem('users') || '[]');
 
-  const courseEnrollments = enrollments.filter((e: any) => e.courseId === courseId);
-  return courseEnrollments.map((e: any) =>
-    users.find((u: any) => u.id === e.studentId)
-  ).filter(Boolean);
-};
+  const course = courses.find((c: any) => c.id === courseId);
+  if (!course) return [];
 
-// Enroll a student into a course by student ID
-export const enrollStudent = (studentIdInput: string, courseId: string) => {
-  const users = JSON.parse(localStorage.getItem('users') || '[]');
-  const enrollments = JSON.parse(localStorage.getItem('enrollments') || '[]');
-
-  // Find user by studentId field
-  const student = users.find((u: any) => u.studentId === studentIdInput && u.role === 'student');
-  if (!student) {
-    return { success: false, error: 'Student not found. Check the Student ID.' };
-  }
-
-  // Check if already enrolled
-  const alreadyEnrolled = enrollments.some(
-    (e: any) => e.studentId === student.id && e.courseId === courseId
+  // Find all students whose programme + level match this course
+  return users.filter(
+    (u: any) =>
+      u.role === 'student' &&
+      u.programme === course.programme &&
+      u.level === course.level
   );
-  if (alreadyEnrolled) {
-    return { success: false, error: 'Student is already enrolled in this class' };
-  }
-
-  enrollments.push({ studentId: student.id, courseId });
-  localStorage.setItem('enrollments', JSON.stringify(enrollments));
-
-  return { success: true, student };
-};
-
-// Create a new course
-export const createCourse = (courseName: string, courseCode: string, lecturerId: string) => {
-  const courses = JSON.parse(localStorage.getItem('courses') || '[]');
-  const users = JSON.parse(localStorage.getItem('users') || '[]');
-  const enrollments = JSON.parse(localStorage.getItem('enrollments') || '[]');
-
-  const newCourse = {
-    id: `c${Date.now()}`,
-    courseName,
-    courseCode,
-    lecturerId
-  };
-
-  courses.push(newCourse);
-  localStorage.setItem('courses', JSON.stringify(courses));
-
-  // Auto-enroll all students in the new course
-  const students = users.filter((u: any) => u.role === 'student');
-  students.forEach((student: any) => {
-    enrollments.push({ studentId: student.id, courseId: newCourse.id });
-  });
-  localStorage.setItem('enrollments', JSON.stringify(enrollments));
-
-  return { success: true, course: newCourse };
-};
-
-// Delete a course
-export const deleteCourse = (courseId: string) => {
-  const courses = JSON.parse(localStorage.getItem('courses') || '[]');
-  const enrollments = JSON.parse(localStorage.getItem('enrollments') || '[]');
-  const attendance = JSON.parse(localStorage.getItem('attendance') || '[]');
-  const attendanceCodes = JSON.parse(localStorage.getItem('attendanceCodes') || '[]');
-
-  // Filter out the course
-  const updatedCourses = courses.filter((c: any) => c.id !== courseId);
-
-  // Filter out related records
-  const updatedEnrollments = enrollments.filter((e: any) => e.courseId !== courseId);
-  const updatedAttendance = attendance.filter((a: any) => a.courseId !== courseId);
-  const updatedCodes = attendanceCodes.filter((c: any) => c.courseId !== courseId);
-
-  localStorage.setItem('courses', JSON.stringify(updatedCourses));
-  localStorage.setItem('enrollments', JSON.stringify(updatedEnrollments));
-  localStorage.setItem('attendance', JSON.stringify(updatedAttendance));
-  localStorage.setItem('attendanceCodes', JSON.stringify(updatedCodes));
-
-  return { success: true };
 };
 
 // Get attendance statistics
 export const getAttendanceStats = (courseId: string) => {
   const attendance = JSON.parse(localStorage.getItem('attendance') || '[]');
-  const enrollments = JSON.parse(localStorage.getItem('enrollments') || '[]');
+  const courseStudents = getCourseStudents(courseId);
 
   const courseAttendance = attendance.filter((a: any) => a.courseId === courseId);
-  const enrolledCount = enrollments.filter((e: any) => e.courseId === courseId).length;
+  const enrolledCount = courseStudents.length;
 
   // Get unique dates
   const dates = [...new Set(courseAttendance.map((a: any) => a.date))];
@@ -446,9 +476,118 @@ export const getAttendanceStats = (courseId: string) => {
     totalSessions,
     totalAttendances: courseAttendance.length,
     enrolledStudents: enrolledCount,
-    averageAttendance: totalSessions > 0 ? (courseAttendance.length / (totalSessions * enrolledCount)) * 100 : 0
+    averageAttendance: totalSessions > 0 && enrolledCount > 0
+      ? (courseAttendance.length / (totalSessions * enrolledCount)) * 100
+      : 0
   };
 };
+
+// ============================================================
+// Admin Functions
+// ============================================================
+
+// Get all courses
+export const getAllCourses = () => {
+  const courses = JSON.parse(localStorage.getItem('courses') || '[]');
+  const users = JSON.parse(localStorage.getItem('users') || '[]');
+
+  return courses.map((c: any) => ({
+    ...c,
+    lecturer: users.find((u: any) => u.id === c.lecturerId)
+  }));
+};
+
+// Get all lecturers
+export const getAllLecturers = () => {
+  const users = JSON.parse(localStorage.getItem('users') || '[]');
+  return users.filter((u: any) => u.role === 'lecturer');
+};
+
+// Get all students
+export const getAllStudents = () => {
+  const users = JSON.parse(localStorage.getItem('users') || '[]');
+  return users.filter((u: any) => u.role === 'student');
+};
+
+// Create a new course (admin only)
+export const createCourse = (
+  courseName: string,
+  courseCode: string,
+  programme: string,
+  level: string,
+  semester: string,
+  lecturerId: string
+) => {
+  const courses = JSON.parse(localStorage.getItem('courses') || '[]');
+
+  // Check for duplicate course code
+  const existing = courses.find((c: any) => c.courseCode === courseCode);
+  if (existing) {
+    return { success: false, error: 'A course with this code already exists' };
+  }
+
+  const newCourse: CourseData = {
+    id: `c${Date.now()}`,
+    courseName,
+    courseCode,
+    programme,
+    level,
+    semester,
+    lecturerId
+  };
+
+  courses.push(newCourse);
+  localStorage.setItem('courses', JSON.stringify(courses));
+
+  return { success: true, course: newCourse };
+};
+
+// Update a course (admin only) — e.g., reassign lecturer
+export const updateCourse = (
+  courseId: string,
+  updates: Partial<Omit<CourseData, 'id'>>
+) => {
+  const courses = JSON.parse(localStorage.getItem('courses') || '[]');
+  const courseIndex = courses.findIndex((c: any) => c.id === courseId);
+
+  if (courseIndex === -1) {
+    return { success: false, error: 'Course not found' };
+  }
+
+  // If changing course code, check for duplicates
+  if (updates.courseCode && updates.courseCode !== courses[courseIndex].courseCode) {
+    const dup = courses.find((c: any) => c.courseCode === updates.courseCode && c.id !== courseId);
+    if (dup) {
+      return { success: false, error: 'A course with this code already exists' };
+    }
+  }
+
+  Object.assign(courses[courseIndex], updates);
+  localStorage.setItem('courses', JSON.stringify(courses));
+
+  return { success: true, course: courses[courseIndex] };
+};
+
+// Delete a course (admin only)
+export const deleteCourse = (courseId: string) => {
+  const courses = JSON.parse(localStorage.getItem('courses') || '[]');
+  const attendance = JSON.parse(localStorage.getItem('attendance') || '[]');
+  const attendanceCodes = JSON.parse(localStorage.getItem('attendanceCodes') || '[]');
+
+  const updatedCourses = courses.filter((c: any) => c.id !== courseId);
+  const updatedAttendance = attendance.filter((a: any) => a.courseId !== courseId);
+  const updatedCodes = attendanceCodes.filter((c: any) => c.courseId !== courseId);
+
+  localStorage.setItem('courses', JSON.stringify(updatedCourses));
+  localStorage.setItem('attendance', JSON.stringify(updatedAttendance));
+  localStorage.setItem('attendanceCodes', JSON.stringify(updatedCodes));
+
+  return { success: true };
+};
+
+// ============================================================
+// Auth Functions
+// ============================================================
 
 // Register a new user (student or lecturer)
 export const registerUser = (
@@ -457,7 +596,7 @@ export const registerUser = (
   password: string,
   role: 'student' | 'lecturer',
   studentId?: string,
-  course?: string,
+  programme?: string,
   level?: string
 ) => {
   const users = JSON.parse(localStorage.getItem('users') || '[]');
@@ -470,8 +609,8 @@ export const registerUser = (
 
   // For students, check if student ID is already taken
   if (role === 'student') {
-    if (!studentId || !course || !level) {
-      return { success: false, error: 'Student ID, Course, and Level are required for students' };
+    if (!studentId || !programme || !level) {
+      return { success: false, error: 'Student ID, Programme, and Level are required for students' };
     }
     const existingStudentId = users.find((u: any) => u.studentId === studentId);
     if (existingStudentId) {
@@ -489,22 +628,12 @@ export const registerUser = (
 
   if (role === 'student') {
     newUser.studentId = studentId;
-    newUser.course = course;
+    newUser.programme = programme;
     newUser.level = level;
   }
 
   users.push(newUser);
   localStorage.setItem('users', JSON.stringify(users));
-
-  // Auto-enroll new students into all existing courses
-  if (role === 'student') {
-    const courses = JSON.parse(localStorage.getItem('courses') || '[]');
-    const enrollments = JSON.parse(localStorage.getItem('enrollments') || '[]');
-    courses.forEach((c: any) => {
-      enrollments.push({ studentId: newUser.id, courseId: c.id });
-    });
-    localStorage.setItem('enrollments', JSON.stringify(enrollments));
-  }
 
   const { password: _, ...userWithoutPassword } = newUser;
   return { success: true, user: userWithoutPassword };
@@ -517,7 +646,7 @@ export const updateUserProfile = (
     name?: string;
     email?: string;
     studentId?: string;
-    course?: string;
+    programme?: string;
     level?: string;
     profilePicture?: string;
   }
@@ -531,17 +660,14 @@ export const updateUserProfile = (
 
   const currentUser = users[userIndex];
 
-  // Validate name is not empty
   if (updates.name !== undefined && !updates.name.trim()) {
     return { success: false, error: 'Name cannot be empty' };
   }
 
-  // Validate email is not empty
   if (updates.email !== undefined && !updates.email.trim()) {
     return { success: false, error: 'Email cannot be empty' };
   }
 
-  // Check if updated email + role conflicts with another user
   if (updates.email && updates.email !== currentUser.email) {
     const emailConflict = users.find(
       (u: any) => u.id !== userId && u.email === updates.email && u.role === currentUser.role
@@ -551,7 +677,6 @@ export const updateUserProfile = (
     }
   }
 
-  // For students, check if updated studentId conflicts with another user
   if (currentUser.role === 'student' && updates.studentId && updates.studentId !== currentUser.studentId) {
     const idConflict = users.find(
       (u: any) => u.id !== userId && u.studentId === updates.studentId
@@ -565,7 +690,7 @@ export const updateUserProfile = (
   if (updates.name) users[userIndex].name = updates.name.trim();
   if (updates.email) users[userIndex].email = updates.email.trim();
   if (updates.studentId !== undefined) users[userIndex].studentId = updates.studentId.trim();
-  if (updates.course !== undefined) users[userIndex].course = updates.course.trim();
+  if (updates.programme !== undefined) users[userIndex].programme = updates.programme.trim();
   if (updates.level !== undefined) users[userIndex].level = updates.level.trim();
   if (updates.profilePicture !== undefined) users[userIndex].profilePicture = updates.profilePicture;
 

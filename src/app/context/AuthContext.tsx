@@ -1,30 +1,32 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { registerUser, updateUserProfile } from '../services/mockData';
 
+export type UserRole = 'student' | 'lecturer' | 'admin';
+
 export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'student' | 'lecturer';
+  role: UserRole;
   studentId?: string;
-  course?: string;
+  programme?: string;
   level?: string;
   profilePicture?: string;
 }
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string, role: 'student' | 'lecturer') => Promise<{ success: boolean; error?: string }>;
+  login: (email: string, password: string, role: UserRole) => Promise<{ success: boolean; error?: string }>;
   signup: (
     name: string,
     email: string,
     password: string,
     role: 'student' | 'lecturer',
     studentId?: string,
-    course?: string,
+    programme?: string,
     level?: string
   ) => Promise<{ success: boolean; error?: string }>;
-  updateProfile: (updates: { name?: string; email?: string; studentId?: string; course?: string; level?: string; profilePicture?: string }) => Promise<{ success: boolean; error?: string }>;
+  updateProfile: (updates: { name?: string; email?: string; studentId?: string; programme?: string; level?: string; profilePicture?: string }) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -42,7 +44,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, []);
 
-  const login = async (email: string, password: string, role: 'student' | 'lecturer'): Promise<{ success: boolean; error?: string }> => {
+  const login = async (email: string, password: string, role: UserRole): Promise<{ success: boolean; error?: string }> => {
     try {
       // Get users from localStorage
       const usersData = localStorage.getItem('users');
@@ -70,11 +72,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     password: string,
     role: 'student' | 'lecturer',
     studentId?: string,
-    course?: string,
+    programme?: string,
     level?: string
   ): Promise<{ success: boolean; error?: string }> => {
     try {
-      const result = registerUser(name, email, password, role, studentId, course, level);
+      const result = registerUser(name, email, password, role, studentId, programme, level);
       if (result.success && result.user) {
         setUser(result.user);
         localStorage.setItem('currentUser', JSON.stringify(result.user));
@@ -86,7 +88,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const updateProfile = async (updates: { name?: string; email?: string; studentId?: string; course?: string; level?: string; profilePicture?: string }): Promise<{ success: boolean; error?: string }> => {
+  const updateProfile = async (updates: { name?: string; email?: string; studentId?: string; programme?: string; level?: string; profilePicture?: string }): Promise<{ success: boolean; error?: string }> => {
     if (!user) return { success: false, error: 'Not authenticated' };
     try {
       const result = updateUserProfile(user.id, updates);

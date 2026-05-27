@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { useAuth } from '../context/AuthContext';
-import { GraduationCap, Mail, Lock, AlertCircle, UserCheck, User, IdCard, BookOpen, BarChart3, ArrowLeft } from 'lucide-react';
+import { useAuth, UserRole } from '../context/AuthContext';
+import { GraduationCap, Mail, Lock, AlertCircle, UserCheck, User, IdCard, BookOpen, BarChart3, ShieldCheck } from 'lucide-react';
 
 export const Login: React.FC = () => {
   const [isSignup, setIsSignup] = useState(false);
@@ -10,9 +10,9 @@ export const Login: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
   const [studentId, setStudentId] = useState('');
-  const [course, setCourse] = useState('');
+  const [programme, setProgramme] = useState('');
   const [level, setLevel] = useState('');
-  const [role, setRole] = useState<'student' | 'lecturer' | ''>('');
+  const [role, setRole] = useState<UserRole | ''>('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login, signup } = useAuth();
@@ -24,7 +24,7 @@ export const Login: React.FC = () => {
     setConfirmPassword('');
     setName('');
     setStudentId('');
-    setCourse('');
+    setProgramme('');
     setLevel('');
     setRole('');
     setError('');
@@ -63,8 +63,13 @@ export const Login: React.FC = () => {
         setLoading(false);
         return;
       }
-      if (role === 'student' && (!studentId.trim() || !course.trim() || !level)) {
-        setError('Please fill in all student details (Student ID, Course, Level)');
+      if (role === 'admin') {
+        setError('Admin accounts cannot be created via signup. Please contact the system administrator.');
+        setLoading(false);
+        return;
+      }
+      if (role === 'student' && (!studentId.trim() || !programme.trim() || !level)) {
+        setError('Please fill in all student details (Student ID, Programme, Level)');
         setLoading(false);
         return;
       }
@@ -73,9 +78,9 @@ export const Login: React.FC = () => {
         name.trim(),
         email.trim(),
         password,
-        role,
+        role as 'student' | 'lecturer',
         role === 'student' ? studentId.trim() : undefined,
-        role === 'student' ? course.trim() : undefined,
+        role === 'student' ? programme.trim() : undefined,
         role === 'student' ? level : undefined
       );
 
@@ -92,7 +97,7 @@ export const Login: React.FC = () => {
         const userData = localStorage.getItem('currentUser');
         if (userData) {
           const user = JSON.parse(userData);
-          navigate(user.role === 'student' ? '/student' : '/lecturer');
+          navigate(user.role === 'student' ? '/student' : user.role === 'admin' ? '/admin' : '/lecturer');
         }
       } else {
         setError(result.error || 'Login failed');
@@ -130,46 +135,48 @@ export const Login: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 I am a:
               </label>
-              <div className="flex gap-4">
-                <label
-                  className={`flex-1 flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${role === 'student'
+              <div className="grid grid-cols-3 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setRole(role === 'student' ? '' : 'student')}
+                  className={`flex flex-col items-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${role === 'student'
                     ? 'border-ttu-navy bg-ttu-navy-50'
                     : 'border-gray-200 hover:border-gray-300'
                     }`}
                 >
-                  <input
-                    type="checkbox"
-                    checked={role === 'student'}
-                    onChange={() => setRole(role === 'student' ? '' : 'student')}
-                    className="w-4 h-4 text-ttu-navy rounded border-gray-300 focus:ring-ttu-navy"
-                  />
-                  <div className="flex items-center gap-2">
-                    <GraduationCap className={`w-5 h-5 ${role === 'student' ? 'text-ttu-navy' : 'text-gray-400'}`} />
-                    <span className={`text-sm font-medium ${role === 'student' ? 'text-ttu-navy' : 'text-gray-600'}`}>
-                      Student
-                    </span>
-                  </div>
-                </label>
+                  <GraduationCap className={`w-6 h-6 ${role === 'student' ? 'text-ttu-navy' : 'text-gray-400'}`} />
+                  <span className={`text-sm font-medium ${role === 'student' ? 'text-ttu-navy' : 'text-gray-600'}`}>
+                    Student
+                  </span>
+                </button>
 
-                <label
-                  className={`flex-1 flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${role === 'lecturer'
+                <button
+                  type="button"
+                  onClick={() => setRole(role === 'lecturer' ? '' : 'lecturer')}
+                  className={`flex flex-col items-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${role === 'lecturer'
                     ? 'border-ttu-navy bg-ttu-navy-50'
                     : 'border-gray-200 hover:border-gray-300'
                     }`}
                 >
-                  <input
-                    type="checkbox"
-                    checked={role === 'lecturer'}
-                    onChange={() => setRole(role === 'lecturer' ? '' : 'lecturer')}
-                    className="w-4 h-4 text-ttu-navy rounded border-gray-300 focus:ring-ttu-navy"
-                  />
-                  <div className="flex items-center gap-2">
-                    <UserCheck className={`w-5 h-5 ${role === 'lecturer' ? 'text-ttu-navy' : 'text-gray-400'}`} />
-                    <span className={`text-sm font-medium ${role === 'lecturer' ? 'text-ttu-navy' : 'text-gray-600'}`}>
-                      Lecturer
-                    </span>
-                  </div>
-                </label>
+                  <UserCheck className={`w-6 h-6 ${role === 'lecturer' ? 'text-ttu-navy' : 'text-gray-400'}`} />
+                  <span className={`text-sm font-medium ${role === 'lecturer' ? 'text-ttu-navy' : 'text-gray-600'}`}>
+                    Lecturer
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setRole(role === 'admin' ? '' : 'admin')}
+                  className={`flex flex-col items-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${role === 'admin'
+                    ? 'border-ttu-navy bg-ttu-navy-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                >
+                  <ShieldCheck className={`w-6 h-6 ${role === 'admin' ? 'text-ttu-navy' : 'text-gray-400'}`} />
+                  <span className={`text-sm font-medium ${role === 'admin' ? 'text-ttu-navy' : 'text-gray-600'}`}>
+                    Admin
+                  </span>
+                </button>
               </div>
             </div>
 
@@ -290,8 +297,8 @@ export const Login: React.FC = () => {
                     <input
                       id="course"
                       type="text"
-                      value={course}
-                      onChange={(e) => setCourse(e.target.value)}
+                      value={programme}
+                      onChange={(e) => setProgramme(e.target.value)}
                       className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ttu-navy focus:border-transparent bg-white"
                       placeholder="e.g. Graphic Design"
                       required

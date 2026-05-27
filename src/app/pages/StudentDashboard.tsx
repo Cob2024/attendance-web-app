@@ -198,7 +198,7 @@ export const StudentDashboard: React.FC = () => {
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm text-gray-500">Programme</p>
-                      <p className="font-medium text-gray-900 truncate">{user?.course}</p>
+                      <p className="font-medium text-gray-900 truncate">{user?.programme}</p>
                     </div>
                   </div>
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLocation, useNavigate } from 'react-router';
 import { Sidebar } from '../components/Sidebar';
@@ -6,13 +6,10 @@ import {
   getLecturerCourses,
   getCourseAttendance,
   getCourseStudents,
-  createCourse,
   getAttendanceStats,
   generateAttendanceCode,
   getActiveCode,
-  deactivateCode,
-  enrollStudent,
-  deleteCourse
+  deactivateCode
 } from '../services/mockData';
 import { EditProfileModal } from '../components/EditProfileModal';
 import {
@@ -20,24 +17,18 @@ import {
   Users,
   TrendingUp,
   Download,
-  Plus,
   Search,
   Filter,
   Calendar,
-  Key,
   QrCode,
-  Copy,
   XCircle,
-  UserPlus,
   UserX,
   UserCheck,
   Clock,
   Menu,
   Pencil,
   Mail,
-  Eye,
-  ArrowLeft,
-  Trash2
+  Eye
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
 import { QRCodeSVG } from 'qrcode.react';
@@ -58,19 +49,11 @@ export const LecturerDashboard: React.FC = () => {
   const [stats, setStats] = useState<any>(null);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [showCreateCourse, setShowCreateCourse] = useState(false);
-  const [newCourseName, setNewCourseName] = useState('');
-  const [newCourseCode, setNewCourseCode] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCode, setActiveCode] = useState<any>(null);
-  const [showAddStudent, setShowAddStudent] = useState(false);
-  const [newStudentId, setNewStudentId] = useState('');
   const [summaryDate, setSummaryDate] = useState(new Date().toISOString().split('T')[0]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
-
-  const refreshData = useCallback(() => setRefreshKey(k => k + 1), []);
 
   useEffect(() => {
     if (user) {
@@ -98,26 +81,7 @@ export const LecturerDashboard: React.FC = () => {
       const code = getActiveCode(selectedCourse.id);
       setActiveCode(code);
     }
-  }, [selectedCourse, startDate, endDate, refreshKey]);
-
-  const handleCreateCourse = () => {
-    if (!user || !newCourseName || !newCourseCode) {
-      toast.error('Please fill in all fields');
-      return;
-    }
-
-    const result = createCourse(newCourseName, newCourseCode, user.id);
-
-    if (result.success) {
-      toast.success('Course created successfully!');
-      const updatedCourses = getLecturerCourses(user.id);
-      setCourses(updatedCourses);
-      setNewCourseName('');
-      setNewCourseCode('');
-      setShowCreateCourse(false);
-      refreshData();
-    }
-  };
+  }, [selectedCourse, startDate, endDate]);
 
   const handleGenerateCode = () => {
     if (!selectedCourse || !user) return;
@@ -131,50 +95,6 @@ export const LecturerDashboard: React.FC = () => {
     deactivateCode(selectedCourse.id);
     setActiveCode(null);
     toast.success('Attendance session ended');
-  };
-
-  const handleCopyCode = () => {
-    if (activeCode) {
-      navigator.clipboard.writeText(activeCode.code);
-      toast.success('Code copied to clipboard!');
-    }
-  };
-
-  const handleEnrollStudent = () => {
-    if (!selectedCourse || !newStudentId.trim()) {
-      toast.error('Please enter a Student ID');
-      return;
-    }
-
-    const result = enrollStudent(newStudentId.trim(), selectedCourse.id);
-
-    if (result.success) {
-      toast.success(`Student enrolled in ${selectedCourse.courseName}!`);
-      const students = getCourseStudents(selectedCourse.id);
-      setCourseStudents(students);
-      setNewStudentId('');
-      refreshData();
-      setShowAddStudent(false);
-    } else {
-      toast.error(result.error || 'Failed to enroll student');
-    }
-  };
-
-  const handleDeleteCourse = (courseId: string) => {
-    if (window.confirm('Are you sure you want to delete this course? This action cannot be undone and will remove all attendance records for it.')) {
-      const result = deleteCourse(courseId);
-      if (result.success) {
-        toast.success('Course deleted successfully');
-        const updatedCourses = getLecturerCourses(user?.id || '');
-        setCourses(updatedCourses);
-        if (selectedCourse?.id === courseId) {
-          setSelectedCourse(updatedCourses.length > 0 ? updatedCourses[0] : null);
-        }
-        refreshData();
-      } else {
-        toast.error('Failed to delete course');
-      }
-    }
   };
 
   const downloadPDF = () => {
@@ -300,15 +220,8 @@ export const LecturerDashboard: React.FC = () => {
                     </button>
                     <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">My Classes</h1>
                   </div>
-                  <p className="text-gray-600 ml-11 lg:ml-0">All your courses and classes at a glance</p>
+                  <p className="text-gray-600 ml-11 lg:ml-0">All your assigned courses at a glance</p>
                 </div>
-                <button
-                  onClick={() => setShowCreateCourse(true)}
-                  className="px-4 py-2 bg-ttu-navy text-white rounded-lg font-medium hover:bg-ttu-navy-dark transition-colors flex items-center justify-center gap-2 ml-11 lg:ml-0 self-start"
-                >
-                  <Plus className="w-5 h-5" />
-                  Create New Course
-                </button>
               </div>
 
               {/* Course Cards Grid */}
@@ -325,22 +238,11 @@ export const LecturerDashboard: React.FC = () => {
                         className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
                       >
                         {/* Card Header */}
-                        <div className="bg-gradient-to-r from-ttu-navy to-ttu-navy-dark p-4 lg:p-5 relative group">
-                          <div className="pr-8">
+                        <div className="bg-gradient-to-r from-ttu-navy to-ttu-navy-dark p-4 lg:p-5">
+                          <div>
                             <h3 className="font-semibold text-white text-lg mb-1 truncate">{course.courseName}</h3>
                             <p className="text-white/70 text-sm font-mono">{course.courseCode}</p>
                           </div>
-                          
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteCourse(course.id);
-                            }}
-                            className="absolute top-4 right-4 p-2 text-white/70 hover:text-red-400 hover:bg-black/20 rounded-lg opacity-0 group-hover:opacity-100 transition-all focus:opacity-100"
-                            aria-label="Delete course"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
 
                           {code && (
                             <div className="mt-2 inline-flex items-center gap-1.5 bg-white/20 px-2.5 py-1 rounded-lg">
@@ -401,62 +303,12 @@ export const LecturerDashboard: React.FC = () => {
               ) : (
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
                   <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No Classes Yet</h3>
-                  <p className="text-gray-500 mb-6">Create your first course to get started</p>
-                  <button
-                    onClick={() => setShowCreateCourse(true)}
-                    className="px-6 py-2.5 bg-ttu-navy text-white rounded-lg font-medium hover:bg-ttu-navy-dark transition-colors inline-flex items-center gap-2"
-                  >
-                    <Plus className="w-5 h-5" />
-                    Create Course
-                  </button>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No Classes Assigned</h3>
+                  <p className="text-gray-500">You have not been assigned any courses yet. Contact your administrator.</p>
                 </div>
               )}
 
-              {/* Create Course Modal (shared) */}
-              {showCreateCourse && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                  <div className="bg-white rounded-xl p-6 max-w-md w-full">
-                    <h3 className="text-xl font-semibold text-gray-900 mb-4">Create New Course</h3>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Course Name</label>
-                        <input
-                          type="text"
-                          value={newCourseName}
-                          onChange={(e) => setNewCourseName(e.target.value)}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ttu-navy focus:border-transparent"
-                          placeholder="e.g., Machine Learning"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Course Code</label>
-                        <input
-                          type="text"
-                          value={newCourseCode}
-                          onChange={(e) => setNewCourseCode(e.target.value)}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ttu-navy focus:border-transparent"
-                          placeholder="e.g., CS401"
-                        />
-                      </div>
-                    </div>
-                    <div className="flex gap-3 mt-6">
-                      <button
-                        onClick={() => setShowCreateCourse(false)}
-                        className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={handleCreateCourse}
-                        className="flex-1 px-4 py-2 bg-ttu-navy text-white rounded-lg font-medium hover:bg-ttu-navy-dark transition-colors"
-                      >
-                        Create
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
+
 
               {/* Edit Profile Modal */}
               <EditProfileModal
@@ -629,13 +481,6 @@ export const LecturerDashboard: React.FC = () => {
                   <QrCode className="w-5 h-5" />
                   Generate QR Code
                 </button>
-                <button
-                  onClick={() => setShowCreateCourse(true)}
-                  className="px-4 py-2 bg-ttu-navy text-white rounded-lg font-medium hover:bg-ttu-navy-dark transition-colors flex items-center justify-center gap-2"
-                >
-                  <Plus className="w-5 h-5" />
-                  Create Course
-                </button>
               </div>
             </div>
           </div>
@@ -681,54 +526,7 @@ export const LecturerDashboard: React.FC = () => {
             </div>
           )}
 
-          {/* Create Course Modal */}
-          {showCreateCourse && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-xl p-6 max-w-md w-full">
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">Create New Course</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Course Name
-                    </label>
-                    <input
-                      type="text"
-                      value={newCourseName}
-                      onChange={(e) => setNewCourseName(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ttu-navy focus:border-transparent"
-                      placeholder="e.g., Machine Learning"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Course Code
-                    </label>
-                    <input
-                      type="text"
-                      value={newCourseCode}
-                      onChange={(e) => setNewCourseCode(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ttu-navy focus:border-transparent"
-                      placeholder="e.g., CS401"
-                    />
-                  </div>
-                </div>
-                <div className="flex gap-3 mt-6">
-                  <button
-                    onClick={() => setShowCreateCourse(false)}
-                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleCreateCourse}
-                    className="flex-1 px-4 py-2 bg-ttu-navy text-white rounded-lg font-medium hover:bg-ttu-navy-dark transition-colors"
-                  >
-                    Create
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+
 
           {/* Attendance Chart — always visible */}
           {selectedCourse && (
@@ -1010,63 +808,15 @@ export const LecturerDashboard: React.FC = () => {
 
           {/* Enrolled Students */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mt-6 lg:mt-8">
-            <div className="px-4 lg:px-6 py-4 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="px-4 lg:px-6 py-4 border-b border-gray-200">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">Enrolled Students</h2>
                 <p className="text-sm text-gray-500 mt-1">
                   {courseStudents.length} student{courseStudents.length !== 1 ? 's' : ''} enrolled
+                  <span className="text-gray-400 ml-2">(auto-enrolled by programme + level)</span>
                 </p>
               </div>
-              <button
-                onClick={() => setShowAddStudent(true)}
-                className="px-4 py-2 bg-ttu-navy text-white rounded-lg font-medium hover:bg-ttu-navy-dark transition-colors flex items-center justify-center gap-2 text-sm self-start sm:self-auto"
-              >
-                <UserPlus className="w-4 h-4" />
-                Add Student
-              </button>
             </div>
-
-            {/* Add Student Modal */}
-            {showAddStudent && (
-              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                <div className="bg-white rounded-xl p-6 max-w-md w-full">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">Add Student to Class</h3>
-                  <p className="text-sm text-gray-500 mb-4">
-                    {selectedCourse?.courseName} ({selectedCourse?.courseCode})
-                  </p>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Student ID
-                    </label>
-                    <input
-                      type="text"
-                      value={newStudentId}
-                      onChange={(e) => setNewStudentId(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ttu-navy focus:border-transparent"
-                      placeholder="e.g., BC/GRD/22/118"
-                      autoFocus
-                    />
-                  </div>
-                  <div className="flex gap-3 mt-6">
-                    <button
-                      onClick={() => {
-                        setShowAddStudent(false);
-                        setNewStudentId('');
-                      }}
-                      className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleEnrollStudent}
-                      className="flex-1 px-4 py-2 bg-ttu-navy text-white rounded-lg font-medium hover:bg-ttu-navy-dark transition-colors"
-                    >
-                      Enroll
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
 
             {courseStudents.length > 0 ? (
               <div className="overflow-x-auto">
