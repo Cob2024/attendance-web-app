@@ -128,16 +128,24 @@ A full-featured attendance management system with separate dashboards for studen
 ### Student Accounts
 | Name | Email | Password | Student ID |
 |------|-------|----------|------------|
-| Arhinful Emmanuel Kwabena | emmanuel@student.com | student123 | BC/GRD/22/118 |
-| Joel Teye Tetteh | joel@student.com | student123 | BC/GRD/22/101 |
-| Bernard Mensah Otupri | bernard@student.com | student123 | BC/GRD/22/149 |
-| Emmanuel Lokko | lokko@student.com | student123 | BC/GRD/22/102 |
+| Arhinful Emmanuel Kwabena | arhinful.emmanuel@ttu.edu.gh | student123 | BC/GRD/22/118 |
+| Joel Teye Tetteh | joel.tetteh@ttu.edu.gh | student123 | BC/GRD/22/101 |
+| Bernard Mensah Otupri | bernard.otupri@ttu.edu.gh | student123 | BC/GRD/22/149 |
+| Emmanuel Lokko | emmanuel.lokko@ttu.edu.gh | student123 | BC/GRD/22/102 |
+| Abigail Mensah | abigail.mensah@ttu.edu.gh | student123 | BC/FSD/22/045 |
 
 ### Lecturer Accounts
 | Name | Email | Password |
 |------|-------|----------|
-| Dr. Jane Wilson | jane@lecturer.com | lecturer123 |
-| Prof. Michael Davis | michael@lecturer.com | lecturer123 |
+| Mr. Ernest Kudordjie | ernest.kudordjie@ttu.edu.gh | lecturer123 |
+| Mr. Ernest Kudzordzi | ernest.kudzordzi@ttu.edu.gh | lecturer123 |
+| Mr. Nduro | nduro@ttu.edu.gh | lecturer123 |
+| Prof. Betty Fanniyan | betty.fanniyan@ttu.edu.gh | lecturer123 |
+
+### Admin Account
+| Name | Email | Password |
+|------|-------|----------|
+| System Administrator | admin@ttu.edu.gh | admin123 |
 
 ## 🚦 Getting Started
 

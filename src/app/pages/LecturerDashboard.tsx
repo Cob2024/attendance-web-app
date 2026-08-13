@@ -7,10 +7,11 @@ import {
   getCourseAttendance,
   getCourseStudents,
   getAttendanceStats,
-  generateAttendanceCode,
+  startAttendanceSession,
   getActiveCode,
   deactivateCode
 } from '../services/mockData';
+import { getCurrentPosition } from '../services/geolocation';
 import { EditProfileModal } from '../components/EditProfileModal';
 import {
   BookOpen,
@@ -20,7 +21,7 @@ import {
   Search,
   Filter,
   Calendar,
-  QrCode,
+  MapPin,
   XCircle,
   UserX,
   UserCheck,
@@ -28,10 +29,11 @@ import {
   Menu,
   Pencil,
   Mail,
-  Eye
+  Eye,
+  Play,
+  Radio
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
-import { QRCodeSVG } from 'qrcode.react';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '../components/ui/chart';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -51,6 +53,8 @@ export const LecturerDashboard: React.FC = () => {
   const [endDate, setEndDate] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCode, setActiveCode] = useState<any>(null);
+  const [sessionStudentCount, setSessionStudentCount] = useState(0);
+  const [startingSession, setStartingSession] = useState(false);
   const [summaryDate, setSummaryDate] = useState(new Date().toISOString().split('T')[0]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
@@ -83,18 +87,55 @@ export const LecturerDashboard: React.FC = () => {
     }
   }, [selectedCourse, startDate, endDate]);
 
-  const handleGenerateCode = () => {
+  // Auto-refresh student count for active session
+  useEffect(() => {
+    if (!activeCode || !selectedCourse) return;
+
+    const refreshCount = () => {
+      const today = new Date().toISOString().split('T')[0];
+      const records = getCourseAttendance(selectedCourse.id);
+      const todayRecords = records.filter((r: any) => r.date === today);
+      setSessionStudentCount(todayRecords.length);
+    };
+
+    refreshCount();
+    const interval = setInterval(refreshCount, 5000); // Refresh every 5s
+    return () => clearInterval(interval);
+  }, [activeCode, selectedCourse]);
+
+  const handleStartSession = async () => {
     if (!selectedCourse || !user) return;
-    const newCode = generateAttendanceCode(selectedCourse.id, user.id);
-    setActiveCode(newCode);
-    toast.success('Attendance code generated!');
+    setStartingSession(true);
+
+    try {
+      const position = await getCurrentPosition();
+      const newSession = startAttendanceSession(
+        selectedCourse.id,
+        user.id,
+        position.latitude,
+        position.longitude
+      );
+      setActiveCode(newSession);
+      toast.success('Attendance session started! Your location has been captured.');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to get location. Please enable GPS.');
+    } finally {
+      setStartingSession(false);
+    }
   };
 
-  const handleDeactivateCode = () => {
+  const handleEndSession = () => {
     if (!selectedCourse) return;
     deactivateCode(selectedCourse.id);
     setActiveCode(null);
+    setSessionStudentCount(0);
     toast.success('Attendance session ended');
+
+    // Refresh records
+    const records = getCourseAttendance(selectedCourse.id, startDate, endDate);
+    setAttendanceRecords(records);
+    const courseStats = getAttendanceStats(selectedCourse.id);
+    setStats(courseStats);
   };
 
   const downloadPDF = () => {
@@ -474,12 +515,21 @@ export const LecturerDashboard: React.FC = () => {
 
               <div className="flex flex-col sm:flex-row gap-3 sm:self-end">
                 <button
-                  onClick={handleGenerateCode}
-                  disabled={!selectedCourse || !!activeCode}
+                  onClick={handleStartSession}
+                  disabled={!selectedCourse || !!activeCode || startingSession}
                   className="px-4 py-2 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <QrCode className="w-5 h-5" />
-                  Generate QR Code
+                  {startingSession ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                      Getting Location...
+                    </>
+                  ) : (
+                    <>
+                      <Play className="w-5 h-5" />
+                      Start Session
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -489,33 +539,42 @@ export const LecturerDashboard: React.FC = () => {
           {activeCode && (
             <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl shadow-lg p-4 lg:p-6 mb-6 lg:mb-8 text-white">
               <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
-                <div className="flex flex-col items-center sm:items-start">
-                  <p className="text-emerald-100 text-sm font-medium mb-1">Active Attendance QR Code</p>
-                  <p className="text-xs text-emerald-200 mb-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Radio className="w-5 h-5 animate-pulse" />
+                    <p className="text-emerald-100 text-sm font-medium">Live Attendance Session</p>
+                  </div>
+                  <p className="text-white font-semibold text-lg mb-1">
                     {selectedCourse?.courseName} ({selectedCourse?.courseCode})
                   </p>
-                  <div className="bg-white p-4 rounded-xl shadow-lg">
-                    <QRCodeSVG
-                      value={JSON.stringify({
-                        code: activeCode.code,
-                        courseId: activeCode.courseId,
-                        ts: activeCode.createdAt
-                      })}
-                      size={200}
-                      level="H"
-                      includeMargin={true}
-                    />
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-4">
+                    <div className="bg-white/15 rounded-lg p-3">
+                      <p className="text-emerald-200 text-xs mb-1">Students Marked</p>
+                      <p className="text-2xl font-bold">{sessionStudentCount}</p>
+                    </div>
+                    <div className="bg-white/15 rounded-lg p-3">
+                      <p className="text-emerald-200 text-xs mb-1">Enrolled</p>
+                      <p className="text-2xl font-bold">{courseStudents.length}</p>
+                    </div>
+                    <div className="bg-white/15 rounded-lg p-3">
+                      <div className="flex items-center gap-1 mb-1">
+                        <MapPin className="w-3 h-3 text-emerald-200" />
+                        <p className="text-emerald-200 text-xs">Location</p>
+                      </div>
+                      <p className="text-sm font-medium">Captured ✓</p>
+                      <p className="text-xs text-emerald-200 mt-0.5">50m radius</p>
+                    </div>
                   </div>
+
                   <p className="text-xs text-emerald-200 mt-3">
-                    Generated at {new Date(activeCode.createdAt).toLocaleTimeString()}
-                  </p>
-                  <p className="text-xs text-emerald-100/50 mt-1 font-mono">
-                    Code: {activeCode.code}
+                    Started at {new Date(activeCode.createdAt).toLocaleTimeString()}
                   </p>
                 </div>
+
                 <div className="flex sm:flex-col gap-2">
                   <button
-                    onClick={handleDeactivateCode}
+                    onClick={handleEndSession}
                     className="flex-1 sm:flex-initial px-4 py-2 bg-red-500/80 hover:bg-red-500 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
                   >
                     <XCircle className="w-4 h-4" />
@@ -850,7 +909,7 @@ export const LecturerDashboard: React.FC = () => {
                           {student.email}
                         </td>
                         <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-500 hidden md:table-cell">
-                          {student.course}
+                          {student.programme}
                         </td>
                       </tr>
                     ))}

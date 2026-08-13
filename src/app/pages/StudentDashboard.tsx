@@ -3,17 +3,38 @@ import { useLocation, useNavigate } from 'react-router';
 import { useAuth } from '../context/AuthContext';
 import { Sidebar } from '../components/Sidebar';
 import { EditProfileModal } from '../components/EditProfileModal';
-import { QRScannerModal } from '../components/QRScannerModal';
-import { getStudentCourses, markAttendance, getStudentAttendance, getCourseAttendance } from '../services/mockData';
-import { CheckCircle, Clock, BookOpen, User, IdCard, GraduationCap, QrCode, Menu, Pencil } from 'lucide-react';
+import {
+  getStudentCourses,
+  markAttendance,
+  getStudentAttendance,
+  getCourseAttendance,
+  getActiveSessionsForStudent,
+  getActiveCode
+} from '../services/mockData';
+import { getCurrentPosition } from '../services/geolocation';
+import {
+  CheckCircle,
+  Clock,
+  BookOpen,
+  User,
+  IdCard,
+  GraduationCap,
+  MapPin,
+  Menu,
+  Pencil,
+  Radio,
+  Loader2,
+  AlertCircle,
+  Shield
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 export const StudentDashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { user, deviceFingerprint } = useAuth();
   const [courses, setCourses] = useState<any[]>([]);
   const [attendanceHistory, setAttendanceHistory] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [showScanner, setShowScanner] = useState(false);
+  const [activeSessions, setActiveSessions] = useState<any[]>([]);
+  const [loading, setLoading] = useState<string | null>(null); // courseId being loaded
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
 
@@ -31,34 +52,59 @@ export const StudentDashboard: React.FC = () => {
     }
   }, [user]);
 
-  const handleQRScan = async (data: { code: string; courseId: string }) => {
+  // Poll for active sessions every 10 seconds
+  useEffect(() => {
     if (!user) return;
 
-    setLoading(true);
-    setShowScanner(false);
+    const refreshSessions = () => {
+      const sessions = getActiveSessionsForStudent(user.id);
+      setActiveSessions(sessions);
+    };
 
-    const result = markAttendance(user.id, data.courseId, data.code);
+    refreshSessions();
+    const interval = setInterval(refreshSessions, 10000);
+    return () => clearInterval(interval);
+  }, [user]);
 
-    if (result.success) {
-      toast.success('Attendance marked successfully!');
-      const history = getStudentAttendance(user.id);
-      setAttendanceHistory(history);
-    } else {
-      toast.error(result.error || 'Failed to mark attendance');
+  const handleMarkAttendance = async (courseId: string) => {
+    if (!user || !deviceFingerprint) return;
+
+    setLoading(courseId);
+
+    try {
+      // Get the student's GPS position
+      const position = await getCurrentPosition();
+
+      // Attempt to mark attendance with GPS + device check
+      const result = markAttendance(
+        user.id,
+        courseId,
+        position.latitude,
+        position.longitude,
+        deviceFingerprint
+      );
+
+      if (result.success) {
+        toast.success('Attendance marked successfully!');
+        const history = getStudentAttendance(user.id);
+        setAttendanceHistory(history);
+      } else {
+        toast.error(result.error || 'Failed to mark attendance');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to get your location. Please enable GPS.');
+    } finally {
+      setLoading(null);
     }
-
-    setLoading(false);
   };
 
   const getAttendancePercentage = (courseId: string) => {
-    // Get all attendance records for this course (across all students) to find total sessions
     const allCourseRecords = getCourseAttendance(courseId);
     const uniqueDates = new Set(allCourseRecords.map((a: any) => a.date));
     const totalSessions = uniqueDates.size;
 
     if (totalSessions === 0) return 0;
 
-    // Count how many of those sessions this student attended
     const studentAttendances = attendanceHistory.filter(a => a.courseId === courseId && a.status === 'present');
     return Math.round((studentAttendances.length / totalSessions) * 100);
   };
@@ -66,6 +112,68 @@ export const StudentDashboard: React.FC = () => {
   const isTodayMarked = (courseId: string) => {
     const today = new Date().toISOString().split('T')[0];
     return attendanceHistory.some(a => a.courseId === courseId && a.date === today);
+  };
+
+  const hasActiveSession = (courseId: string) => {
+    return activeSessions.some(s => s.courseId === courseId);
+  };
+
+  const getSessionForCourse = (courseId: string) => {
+    return activeSessions.find(s => s.courseId === courseId);
+  };
+
+  // Render the attendance action button for a course card
+  const renderAttendanceAction = (course: any) => {
+    if (isTodayMarked(course.id)) {
+      return (
+        <div className="flex items-center gap-2 px-4 py-2.5 bg-green-50 text-green-700 rounded-lg">
+          <CheckCircle className="w-5 h-5" />
+          <span className="text-sm font-medium">Marked for today</span>
+        </div>
+      );
+    }
+
+    const session = getSessionForCourse(course.id);
+    const isLoading = loading === course.id;
+
+    if (session) {
+      return (
+        <div className="space-y-2">
+          {/* Active session indicator */}
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-lg">
+            <Radio className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
+            <span className="text-xs font-medium text-emerald-700">
+              Live session by {session.lecturer?.name || 'Lecturer'}
+            </span>
+          </div>
+
+          <button
+            onClick={() => handleMarkAttendance(course.id)}
+            disabled={isLoading}
+            className="w-full px-4 py-2.5 bg-ttu-navy text-white rounded-lg font-medium hover:bg-ttu-navy-dark transition-colors flex items-center justify-center gap-2 disabled:opacity-70"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Verifying Location...
+              </>
+            ) : (
+              <>
+                <MapPin className="w-4 h-4" />
+                Mark Attendance
+              </>
+            )}
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex items-center gap-2 px-4 py-2.5 bg-gray-50 text-gray-400 rounded-lg">
+        <Clock className="w-4 h-4" />
+        <span className="text-sm">No active session</span>
+      </div>
+    );
   };
 
   return (
@@ -93,6 +201,54 @@ export const StudentDashboard: React.FC = () => {
               {isCoursesView ? "All the courses you are currently enrolled in" : "Manage your attendance and view your courses"}
             </p>
           </div>
+
+          {/* Active Sessions Banner */}
+          {!isCoursesView && activeSessions.length > 0 && (
+            <div className="mb-6 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl shadow-lg p-4 text-white">
+              <div className="flex items-center gap-2 mb-3">
+                <Radio className="w-5 h-5 animate-pulse" />
+                <h2 className="font-semibold">
+                  {activeSessions.length} Active Session{activeSessions.length !== 1 ? 's' : ''}
+                </h2>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {activeSessions.map(session => (
+                  <div
+                    key={session.id}
+                    className="bg-white/15 rounded-lg p-3 flex items-center justify-between"
+                  >
+                    <div>
+                      <p className="font-medium text-sm">{session.course?.courseName}</p>
+                      <p className="text-emerald-200 text-xs">{session.course?.courseCode} • {session.lecturer?.name}</p>
+                    </div>
+                    {isTodayMarked(session.courseId) ? (
+                      <div className="flex items-center gap-1 bg-white/20 px-2 py-1 rounded-full">
+                        <CheckCircle className="w-3.5 h-3.5" />
+                        <span className="text-xs font-medium">Done</span>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => handleMarkAttendance(session.courseId)}
+                        disabled={loading === session.courseId}
+                        className="px-3 py-1.5 bg-white text-ttu-navy rounded-lg text-xs font-semibold hover:bg-white/90 transition-colors disabled:opacity-70 flex items-center gap-1.5"
+                      >
+                        {loading === session.courseId ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <MapPin className="w-3 h-3" />
+                        )}
+                        Mark
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center gap-1.5 mt-3 text-emerald-200">
+                <Shield className="w-3.5 h-3.5" />
+                <p className="text-xs">Location verified within 50m • Device locked to your account</p>
+              </div>
+            </div>
+          )}
 
           {isCoursesView ? (
             /* ===== MY COURSES VIEW ===== */
@@ -126,21 +282,7 @@ export const StudentDashboard: React.FC = () => {
                         </div>
                       </div>
 
-                      {isTodayMarked(course.id) ? (
-                        <div className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-lg">
-                          <CheckCircle className="w-5 h-5" />
-                          <span className="text-sm font-medium">Marked for today</span>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => setShowScanner(true)}
-                          disabled={loading}
-                          className="w-full px-4 py-2 bg-ttu-navy text-white rounded-lg font-medium hover:bg-ttu-navy-dark transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-                        >
-                          <QrCode className="w-4 h-4" />
-                          Scan QR Code
-                        </button>
-                      )}
+                      {renderAttendanceAction(course)}
                     </div>
                   </div>
                 )) : (
@@ -246,21 +388,7 @@ export const StudentDashboard: React.FC = () => {
                           </div>
                         </div>
 
-                        {isTodayMarked(course.id) ? (
-                          <div className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-lg">
-                            <CheckCircle className="w-5 h-5" />
-                            <span className="text-sm font-medium">Marked for today</span>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => setShowScanner(true)}
-                            disabled={loading}
-                            className="w-full px-4 py-2 bg-ttu-navy text-white rounded-lg font-medium hover:bg-ttu-navy-dark transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-                          >
-                            <QrCode className="w-4 h-4" />
-                            Scan QR Code
-                          </button>
-                        )}
+                        {renderAttendanceAction(course)}
                       </div>
                     </div>
                   ))}
@@ -340,13 +468,6 @@ export const StudentDashboard: React.FC = () => {
               </div>
             </>
           )}
-
-          {/* QR Scanner Modal */}
-          <QRScannerModal
-            isOpen={showScanner}
-            onClose={() => setShowScanner(false)}
-            onScan={handleQRScan}
-          />
 
           {/* Edit Profile Modal */}
           <EditProfileModal

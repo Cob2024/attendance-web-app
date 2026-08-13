@@ -185,10 +185,11 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
                 <input
                   type="text"
                   value={programme}
-                  onChange={(e) => setProgramme(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ttu-navy focus:border-transparent"
+                  disabled
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
                   placeholder="e.g., Graphic Design"
                 />
+                <p className="text-xs text-gray-400 mt-1">Contact an administrator to change your programme</p>
               </div>
 
               <div>
@@ -198,10 +199,11 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
                 <input
                   type="text"
                   value={level}
-                  onChange={(e) => setLevel(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ttu-navy focus:border-transparent"
+                  disabled
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
                   placeholder="e.g., Level 400"
                 />
+                <p className="text-xs text-gray-400 mt-1">Contact an administrator to change your level</p>
               </div>
             </>
           )}

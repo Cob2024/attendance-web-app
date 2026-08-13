@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { registerUser, updateUserProfile } from '../services/mockData';
+import { registerUser, updateUserProfile, validateDevice, registerDevice } from '../services/mockData';
+import { generateDeviceFingerprint } from '../services/deviceFingerprint';
 
 export type UserRole = 'student' | 'lecturer' | 'admin';
 
@@ -16,6 +17,7 @@ export interface User {
 
 interface AuthContextType {
   user: User | null;
+  deviceFingerprint: string | null;
   login: (email: string, password: string, role: UserRole) => Promise<{ success: boolean; error?: string }>;
   signup: (
     name: string,
@@ -35,12 +37,17 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [deviceFingerprint, setDeviceFingerprint] = useState<string | null>(null);
 
   useEffect(() => {
     // Check for existing session
     const storedUser = localStorage.getItem('currentUser');
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
+      const parsed = JSON.parse(storedUser);
+      setUser(parsed);
+      // Generate fingerprint for existing session
+      const fp = generateDeviceFingerprint();
+      setDeviceFingerprint(fp);
     }
   }, []);
 
@@ -54,8 +61,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const foundUser = users.find((u: any) => u.email === email && u.password === password && u.role === role);
 
       if (foundUser) {
+        // Generate device fingerprint
+        const fp = generateDeviceFingerprint();
+
+        // For students and lecturers, validate/register device
+        if (role === 'student' || role === 'lecturer') {
+          const deviceCheck = validateDevice(foundUser.id, fp);
+          if (!deviceCheck.valid) {
+            return { success: false, error: deviceCheck.error || 'Device verification failed' };
+          }
+        }
+
         const { password: _, ...userWithoutPassword } = foundUser;
         setUser(userWithoutPassword);
+        setDeviceFingerprint(fp);
         localStorage.setItem('currentUser', JSON.stringify(userWithoutPassword));
         return { success: true };
       } else {
@@ -78,7 +97,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       const result = registerUser(name, email, password, role, studentId, programme, level);
       if (result.success && result.user) {
+        // Generate and register device fingerprint for new user
+        const fp = generateDeviceFingerprint();
+        registerDevice(result.user.id, fp);
+
         setUser(result.user);
+        setDeviceFingerprint(fp);
         localStorage.setItem('currentUser', JSON.stringify(result.user));
         return { success: true };
       }
@@ -105,11 +129,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const logout = () => {
     setUser(null);
+    setDeviceFingerprint(null);
     localStorage.removeItem('currentUser');
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, signup, updateProfile, logout, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, deviceFingerprint, login, signup, updateProfile, logout, isAuthenticated: !!user }}>
       {children}
     </AuthContext.Provider>
   );

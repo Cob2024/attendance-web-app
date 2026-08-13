@@ -10,6 +10,8 @@ import {
   createCourse,
   updateCourse,
   deleteCourse,
+  getRegisteredDevice,
+  resetDeviceBinding,
   PROGRAMMES,
   LEVELS,
   CURRENT_SEMESTER
@@ -27,7 +29,11 @@ import {
   BarChart3,
   Edit3,
   Save,
-  X
+  X,
+  Smartphone,
+  RotateCcw,
+  CheckCircle,
+  AlertTriangle
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -121,6 +127,18 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
+  const handleResetDevice = (studentId: string, studentName: string) => {
+    if (window.confirm(`Reset device binding for ${studentName}? This will allow the student to sign in and mark attendance on a new phone/device.`)) {
+      const result = resetDeviceBinding(studentId);
+      if (result.success) {
+        toast.success(`Device binding reset for ${studentName}! They can now log in on a new device.`);
+        refreshData();
+      } else {
+        toast.error('Failed to reset device binding');
+      }
+    }
+  };
+
   // Filter courses for search
   const filteredCourses = courses.filter(
     (c) =>
@@ -129,9 +147,19 @@ export const AdminDashboard: React.FC = () => {
       c.programme.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Filter students for search
+  const filteredStudents = students.filter(
+    (s) =>
+      s.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.studentId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.programme?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.email?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   const isDashboard = currentView === '/admin' || currentView === '/admin/';
   const isCoursesView = currentView.startsWith('/admin/courses');
   const isLecturersView = currentView.startsWith('/admin/lecturers');
+  const isStudentsView = currentView.startsWith('/admin/students');
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -208,7 +236,7 @@ export const AdminDashboard: React.FC = () => {
               </div>
 
               {/* Quick Actions */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6 mb-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8">
                 <button
                   onClick={() => navigate('/admin/courses')}
                   className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow text-left group"
@@ -224,6 +252,14 @@ export const AdminDashboard: React.FC = () => {
                   <GraduationCap className="w-8 h-8 text-purple-600 mb-3 group-hover:scale-110 transition-transform" />
                   <h3 className="font-semibold text-gray-900 mb-1">View Lecturers</h3>
                   <p className="text-sm text-gray-500">See all lecturers and their course assignments</p>
+                </button>
+                <button
+                  onClick={() => navigate('/admin/students')}
+                  className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow text-left group"
+                >
+                  <Smartphone className="w-8 h-8 text-emerald-600 mb-3 group-hover:scale-110 transition-transform" />
+                  <h3 className="font-semibold text-gray-900 mb-1">Manage Devices</h3>
+                  <p className="text-sm text-gray-500">Reset student device locks when they switch phones</p>
                 </button>
                 <button
                   onClick={() => setShowCreateCourse(true)}
@@ -460,6 +496,135 @@ export const AdminDashboard: React.FC = () => {
                     </div>
                   );
                 })}
+              </div>
+            </>
+          )}
+
+          {/* ===== STUDENTS & DEVICE MANAGEMENT VIEW ===== */}
+          {isStudentsView && (
+            <>
+              <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 mb-6 lg:mb-8">
+                <div>
+                  <div className="flex items-center gap-3 mb-2">
+                    <button
+                      onClick={() => setSidebarOpen(true)}
+                      className="lg:hidden p-2 rounded-lg hover:bg-gray-200 transition-colors"
+                      aria-label="Open menu"
+                    >
+                      <Menu className="w-6 h-6 text-gray-700" />
+                    </button>
+                    <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Student & Device Management</h1>
+                  </div>
+                  <p className="text-gray-600 ml-11 lg:ml-0">
+                    View enrolled students and reset device locks when a student changes their phone or browser.
+                  </p>
+                </div>
+              </div>
+
+              {/* Security info banner */}
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-sm text-blue-900">
+                <div className="flex items-start gap-3">
+                  <Smartphone className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold">Device Lock Protection Active</p>
+                    <p className="text-blue-700 text-xs mt-0.5">
+                      Students are bound to their device upon their first login to prevent proxy attendance. If a student gets a new phone or changes browsers, click <strong>"Reset Device"</strong> to clear their old device binding.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Search */}
+              <div className="relative mb-6">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ttu-navy focus:border-transparent bg-white text-sm"
+                  placeholder="Search students by name, student ID, programme, level, or email..."
+                />
+              </div>
+
+              {/* Students Table */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student Name</th>
+                        <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student ID</th>
+                        <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Programme & Level</th>
+                        <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Email</th>
+                        <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Device Lock Status</th>
+                        <th className="px-4 lg:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {filteredStudents.map((student: any) => {
+                        const deviceBinding = getRegisteredDevice(student.id);
+
+                        return (
+                          <tr key={student.id} className="hover:bg-gray-50">
+                            <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
+                              <p className="font-semibold text-gray-900 text-sm">{student.name}</p>
+                            </td>
+                            <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-700">
+                              {student.studentId}
+                            </td>
+                            <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-600 hidden sm:table-cell">
+                              <p className="font-medium text-gray-800">{student.programme}</p>
+                              <p className="text-xs text-gray-500">{student.level}</p>
+                            </td>
+                            <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-600 hidden md:table-cell">
+                              {student.email}
+                            </td>
+                            <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
+                              {deviceBinding ? (
+                                <div className="flex flex-col">
+                                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 w-fit">
+                                    <Smartphone className="w-3.5 h-3.5 text-emerald-600" />
+                                    Device Linked
+                                  </span>
+                                  <span className="text-[11px] text-gray-400 mt-1">
+                                    Linked: {new Date(deviceBinding.registeredAt).toLocaleDateString()}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 w-fit">
+                                  <AlertTriangle className="w-3.5 h-3.5 text-gray-400" />
+                                  No Device Bound
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-right">
+                              <button
+                                onClick={() => handleResetDevice(student.id, student.name)}
+                                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                                  deviceBinding
+                                    ? 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 cursor-pointer'
+                                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-200 cursor-pointer'
+                                }`}
+                                title="Reset device lock to let student sign in from a new device"
+                              >
+                                <RotateCcw className="w-3.5 h-3.5" />
+                                Reset Device
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                {filteredStudents.length === 0 && (
+                  <div className="p-12 text-center">
+                    <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-500">
+                      {searchQuery ? 'No students match your search' : 'No students registered yet'}
+                    </p>
+                  </div>
+                )}
               </div>
             </>
           )}

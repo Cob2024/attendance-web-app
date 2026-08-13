@@ -3,7 +3,14 @@
 // Courses belong to a programme + level + semester.
 // Admin creates courses and assigns lecturers.
 // Students are auto-enrolled by programme + level matching.
+//
+// Attendance uses GPS geofencing (50m radius) + device
+// fingerprinting to prevent proxy attendance.
 // ============================================================
+
+import { calculateDistance } from './geolocation';
+
+const GEOFENCE_RADIUS_METERS = 50;
 
 export interface CourseData {
   id: string;
@@ -92,7 +99,8 @@ export const initializeMockData = () => {
     console.error("Failed to patch course data", e);
   }
 
-  if (!localStorage.getItem('initialized_v2')) {
+  const existingUsers = JSON.parse(localStorage.getItem('users') || '[]');
+  if (!localStorage.getItem('initialized_v2') || existingUsers.length === 0) {
     // Clear old data format
     localStorage.removeItem('initialized');
     localStorage.removeItem('enrollments');
@@ -324,15 +332,40 @@ export const getStudentAttendance = (studentId: string) => {
     .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
 };
 
-// Mark attendance (requires a valid attendance code)
-export const markAttendance = (studentId: string, courseId: string, code: string) => {
-  // Validate attendance code
-  const activeCode = getActiveCode(courseId);
-  if (!activeCode) {
+// Mark attendance — validates GPS location + device fingerprint
+export const markAttendance = (
+  studentId: string,
+  courseId: string,
+  studentLat: number,
+  studentLng: number,
+  deviceFingerprint: string
+) => {
+  // Validate active session exists
+  const session = getActiveCode(courseId);
+  if (!session) {
     return { success: false, error: 'No active attendance session for this course' };
   }
-  if (activeCode.code !== code.toUpperCase()) {
-    return { success: false, error: 'Invalid attendance code' };
+
+  // Validate device fingerprint
+  const deviceCheck = validateDevice(studentId, deviceFingerprint);
+  if (!deviceCheck.valid) {
+    return { success: false, error: deviceCheck.error || 'Device verification failed' };
+  }
+
+  // Validate GPS location (50m radius)
+  if (session.lecturerLat != null && session.lecturerLng != null) {
+    const distance = calculateDistance(
+      studentLat,
+      studentLng,
+      session.lecturerLat,
+      session.lecturerLng
+    );
+    if (distance > GEOFENCE_RADIUS_METERS) {
+      return {
+        success: false,
+        error: `You are too far from the class location (${Math.round(distance)}m away, max ${GEOFENCE_RADIUS_METERS}m)`,
+      };
+    }
   }
 
   const attendance = JSON.parse(localStorage.getItem('attendance') || '[]');
@@ -372,37 +405,45 @@ export const getLecturerCourses = (lecturerId: string) => {
   return courses.filter((c: any) => c.lecturerId === lecturerId);
 };
 
-// Generate a unique 5-character attendance code for a course
-export const generateAttendanceCode = (courseId: string, lecturerId: string) => {
+// Start an attendance session — stores lecturer GPS for geofencing
+export const startAttendanceSession = (
+  courseId: string,
+  lecturerId: string,
+  lecturerLat: number,
+  lecturerLng: number
+) => {
   const codes = JSON.parse(localStorage.getItem('attendanceCodes') || '[]');
 
-  // Deactivate any existing active code for this course
+  // Deactivate any existing active session for this course
   codes.forEach((c: any) => {
     if (c.courseId === courseId && c.active) {
       c.active = false;
     }
   });
 
-  // Generate random 5-char alphanumeric code
+  // Generate random 5-char alphanumeric code (internal session ID)
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let code = '';
   for (let i = 0; i < 5; i++) {
     code += chars.charAt(Math.floor(Math.random() * chars.length));
   }
 
-  const newCode = {
+  const newSession = {
     id: `code${Date.now()}`,
     courseId,
     lecturerId,
     code,
     active: true,
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    lecturerLat,
+    lecturerLng,
+    radiusMeters: GEOFENCE_RADIUS_METERS,
   };
 
-  codes.push(newCode);
+  codes.push(newSession);
   localStorage.setItem('attendanceCodes', JSON.stringify(codes));
 
-  return newCode;
+  return newSession;
 };
 
 // Get the currently active attendance code for a course
@@ -480,6 +521,86 @@ export const getAttendanceStats = (courseId: string) => {
       ? (courseAttendance.length / (totalSessions * enrolledCount)) * 100
       : 0
   };
+};
+
+// ============================================================
+// Device Fingerprint Binding Functions
+// ============================================================
+
+// Register a device fingerprint for a user (called on first login)
+export const registerDevice = (userId: string, fingerprint: string) => {
+  const bindings = JSON.parse(localStorage.getItem('deviceBindings') || '{}');
+  bindings[userId] = {
+    fingerprint,
+    registeredAt: new Date().toISOString(),
+  };
+  localStorage.setItem('deviceBindings', JSON.stringify(bindings));
+};
+
+// Get the registered device for a user
+export const getRegisteredDevice = (userId: string) => {
+  const bindings = JSON.parse(localStorage.getItem('deviceBindings') || '{}');
+  return bindings[userId] || null;
+};
+
+// Validate that the current device matches the registered device
+export const validateDevice = (userId: string, currentFingerprint: string): { valid: boolean; error?: string } => {
+  const binding = getRegisteredDevice(userId);
+
+  // No device registered yet — auto-register on first use
+  if (!binding) {
+    registerDevice(userId, currentFingerprint);
+    return { valid: true };
+  }
+
+  // Check if fingerprint matches
+  if (binding.fingerprint !== currentFingerprint) {
+    return {
+      valid: false,
+      error: 'This account is linked to a different device. Please use your registered device or contact your administrator to reset.',
+    };
+  }
+
+  return { valid: true };
+};
+
+// Reset device binding for a user (admin function)
+export const resetDeviceBinding = (userId: string) => {
+  const bindings = JSON.parse(localStorage.getItem('deviceBindings') || '{}');
+  delete bindings[userId];
+  localStorage.setItem('deviceBindings', JSON.stringify(bindings));
+  return { success: true };
+};
+
+// Get active sessions for a student's enrolled courses
+export const getActiveSessionsForStudent = (studentId: string) => {
+  const users = JSON.parse(localStorage.getItem('users') || '[]');
+  const courses = JSON.parse(localStorage.getItem('courses') || '[]');
+  const codes = JSON.parse(localStorage.getItem('attendanceCodes') || '[]');
+  const student = users.find((u: any) => u.id === studentId);
+
+  if (!student) return [];
+
+  // Get courses matching the student's programme and level
+  const studentCourses = courses.filter(
+    (c: any) => c.programme === student.programme && c.level === student.level
+  );
+
+  // Find active sessions for those courses
+  const activeSessions = codes.filter(
+    (c: any) => c.active && studentCourses.some((sc: any) => sc.id === c.courseId)
+  );
+
+  // Enrich with course data and lecturer info
+  return activeSessions.map((session: any) => {
+    const course = courses.find((c: any) => c.id === session.courseId);
+    const lecturer = users.find((u: any) => u.id === session.lecturerId);
+    return {
+      ...session,
+      course,
+      lecturer,
+    };
+  });
 };
 
 // ============================================================

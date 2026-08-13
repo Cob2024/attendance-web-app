@@ -7,6 +7,7 @@ import {
     Calendar,
     LogOut,
     User,
+    Users,
     GraduationCap,
     ShieldCheck,
     X
@@ -34,6 +35,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
         { name: 'Dashboard', icon: LayoutDashboard, path: '/admin' },
         { name: 'Courses', icon: BookOpen, path: '/admin/courses' },
         { name: 'Lecturers', icon: GraduationCap, path: '/admin/lecturers' },
+        { name: 'Students', icon: Users, path: '/admin/students' },
     ] : [
         { name: 'Dashboard', icon: LayoutDashboard, path: '/lecturer' },
         { name: 'My Classes', icon: BookOpen, path: '/lecturer/classes' },
