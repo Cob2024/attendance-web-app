@@ -68,13 +68,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
     const sidebarContent = (
         <div className="w-64 bg-ttu-navy h-full flex flex-col text-white shadow-xl">
             {/* Sidebar Header */}
-            <div className="p-6 border-b border-white/10 flex items-center gap-3">
-                <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center p-1">
+            <div className="p-5 border-b border-white/10 flex items-center gap-3.5">
+                <div className="w-14 h-14 bg-white rounded-xl flex items-center justify-center p-1.5 shadow-md flex-shrink-0">
                     <img src="/assets/ttu-logo.png" alt="TTU" className="w-full h-full object-contain" />
                 </div>
                 <div className="flex-1">
-                    <h1 className="font-bold text-lg leading-tight text-white">SmartAttend</h1>
-                    <p className="text-xs text-white/50 uppercase tracking-widest font-semibold">TTU Portal</p>
+                    <h1 className="font-bold text-xl leading-tight text-white">SmartAttend</h1>
+                    <p className="text-[11px] text-ttu-gold uppercase tracking-widest font-bold">TTU Portal</p>
                 </div>
                 {/* Close button — visible only on mobile */}
                 {onClose && (

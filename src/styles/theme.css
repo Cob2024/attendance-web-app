@@ -334,6 +334,10 @@ html:not(.dark) .text-emerald-700 {
 html.dark img[src*="ttu-logo"],
 html.dark .ttu-logo-container,
 html.dark .w-10.h-10.bg-white,
+html.dark .w-12.h-12.bg-white,
+html.dark .w-14.h-14.bg-white,
+html.dark .w-16.h-16.bg-white,
+html.dark .w-20.h-20.bg-white,
 html.dark .w-28.h-28.bg-white,
 html.dark .w-36.h-36.bg-white {
   background-color: #ffffff !important;

@@ -138,8 +138,8 @@ export const Login: React.FC = () => {
           </div>
 
           {/* Top Brand Header */}
-          <div className="relative z-10 flex items-center gap-3">
-            <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center p-1.5 shadow-lg flex-shrink-0">
+          <div className="relative z-10 flex items-center gap-3.5">
+            <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center p-2 shadow-lg flex-shrink-0">
               <img src="/assets/ttu-logo.png" alt="TTU Logo" className="w-full h-full object-contain" />
             </div>
             <div>
@@ -198,8 +198,8 @@ export const Login: React.FC = () => {
 
             {/* Mobile Header Logo (visible on mobile only) */}
             <div className="lg:hidden text-center mb-6">
-              <div className="inline-flex items-center justify-center w-20 h-20 mb-2">
-                <img src="/assets/ttu-logo.png" alt="Takoradi Technical University Logo" className="w-20 h-20 object-contain" />
+              <div className="inline-flex items-center justify-center w-28 h-28 mb-2 p-2 bg-white rounded-2xl shadow-md border border-gray-200">
+                <img src="/assets/ttu-logo.png" alt="Takoradi Technical University Logo" className="w-full h-full object-contain" />
               </div>
               <h2 className="text-2xl font-bold text-gray-900">SmartAttend</h2>
               <p className="text-xs text-gray-500">Takoradi Technical University</p>

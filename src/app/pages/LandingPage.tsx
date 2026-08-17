@@ -32,13 +32,13 @@ export const LandingPage: React.FC = () => {
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           
           {/* Logo & Brand Name */}
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
-            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center p-1 shadow-md border border-slate-200/60">
+          <div className="flex items-center gap-3.5 cursor-pointer" onClick={() => navigate('/')}>
+            <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white rounded-2xl flex items-center justify-center p-1.5 shadow-md border border-slate-200/80 flex-shrink-0">
               <img src="/assets/ttu-logo.png" alt="TTU Logo" className="w-full h-full object-contain" />
             </div>
             <div>
-              <span className="text-lg font-bold text-ttu-navy dark:text-white leading-tight block">SmartAttend</span>
-              <span className="text-[10px] text-ttu-gold font-semibold uppercase tracking-wider block -mt-0.5">Takoradi Technical Univ.</span>
+              <span className="text-xl font-bold text-ttu-navy dark:text-white leading-tight block">SmartAttend</span>
+              <span className="text-xs text-ttu-gold font-semibold uppercase tracking-wider block -mt-0.5">Takoradi Technical Univ.</span>
             </div>
           </div>
 
@@ -400,12 +400,12 @@ export const LandingPage: React.FC = () => {
        * ============================================================ */}
       <footer id="about" className="bg-ttu-navy text-white py-12 px-4 sm:px-8 border-t border-slate-800">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center p-1">
+          <div className="flex items-center gap-3.5">
+            <div className="w-14 h-14 bg-white rounded-xl flex items-center justify-center p-1.5 shadow-md flex-shrink-0">
               <img src="/assets/ttu-logo.png" alt="TTU Logo" className="w-full h-full object-contain" />
             </div>
             <div>
-              <h5 className="font-bold text-base">Takoradi Technical University</h5>
+              <h5 className="font-bold text-lg">Takoradi Technical University</h5>
               <p className="text-xs text-ttu-gold font-medium">SmartAttend Official Management Portal</p>
             </div>
           </div>
