@@ -99,10 +99,39 @@ export const initializeMockData = () => {
     console.error("Failed to patch course data", e);
   }
 
+  // Ensure enrollments array exists in localStorage
+  try {
+    const existingEnrollments = JSON.parse(localStorage.getItem('enrollments') || '[]');
+    if (existingEnrollments.length === 0) {
+      const storedUsers = JSON.parse(localStorage.getItem('users') || '[]');
+      const storedCourses = JSON.parse(localStorage.getItem('courses') || '[]');
+      const studentUsers = storedUsers.filter((u: any) => u.role === 'student');
+      const autoEnr: any[] = [];
+      storedCourses.forEach((course: any) => {
+        studentUsers.forEach((student: any) => {
+          if (student.programme === course.programme && student.level === course.level) {
+            autoEnr.push({
+              id: `enr_${student.id}_${course.id}`,
+              studentId: student.id,
+              courseId: course.id,
+              enrolledAt: new Date().toISOString(),
+            });
+          }
+        });
+      });
+      if (autoEnr.length > 0) {
+        localStorage.setItem('enrollments', JSON.stringify(autoEnr));
+      }
+    }
+  } catch (e) {
+    console.error("Failed to patch enrollments", e);
+  }
+
   const existingUsers = JSON.parse(localStorage.getItem('users') || '[]');
-  if (!localStorage.getItem('initialized_v2') || existingUsers.length === 0) {
+  if (!localStorage.getItem('initialized_v3') || existingUsers.length === 0) {
     // Clear old data format
     localStorage.removeItem('initialized');
+    localStorage.removeItem('initialized_v2');
     localStorage.removeItem('enrollments');
 
     // Users (admin, students, lecturers)
@@ -314,7 +343,7 @@ export const initializeMockData = () => {
     });
     localStorage.setItem('enrollments', JSON.stringify(enrollments));
 
-    localStorage.setItem('initialized_v2', 'true');
+    localStorage.setItem('initialized_v3', 'true');
   }
 };
 
