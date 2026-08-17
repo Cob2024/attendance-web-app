@@ -17,7 +17,13 @@ import {
   registerUser,
   PROGRAMMES,
   LEVELS,
-  CURRENT_SEMESTER
+  CURRENT_SEMESTER,
+  getEnrolledStudents,
+  enrollStudent,
+  unenrollStudent,
+  autoEnrollStudents,
+  getCourseStudents,
+  exportAllAttendanceCSV
 } from '../services/mockData';
 import {
   BookOpen,
@@ -38,7 +44,11 @@ import {
   CheckCircle,
   AlertTriangle,
   UserPlus,
-  Mail
+  Mail,
+  UserMinus,
+  UsersRound,
+  Download,
+  FileSpreadsheet
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -88,6 +98,12 @@ export const AdminDashboard: React.FC = () => {
   const [newLecturerName, setNewLecturerName] = useState('');
   const [newLecturerEmail, setNewLecturerEmail] = useState('');
   const [newLecturerPassword, setNewLecturerPassword] = useState('lecturer123');
+
+  // Enrollment management state
+  const [expandedCourseId, setExpandedCourseId] = useState<string | null>(null);
+  const [courseEnrollments, setCourseEnrollments] = useState<any[]>([]);
+  const [showEnrollModal, setShowEnrollModal] = useState(false);
+  const [enrollSearchQuery, setEnrollSearchQuery] = useState('');
 
   useEffect(() => {
     refreshData();
@@ -204,17 +220,17 @@ export const AdminDashboard: React.FC = () => {
 
   const handleAddLecturer = () => {
     if (!newLecturerName.trim() || !newLecturerEmail.trim()) {
-      toast.error('Please enter name and email');
+      toast.error('Please fill in all fields');
       return;
     }
     const result = registerUser(
       newLecturerName.trim(),
-      newLecturerEmail.trim(),
+      newLecturerEmail.trim().toLowerCase(),
       newLecturerPassword,
       'lecturer'
     );
     if (result.success) {
-      toast.success(`Lecturer "${newLecturerName}" added with password: ${newLecturerPassword}`);
+      toast.success('Lecturer added successfully!');
       setShowAddLecturer(false);
       setNewLecturerName('');
       setNewLecturerEmail('');
@@ -222,6 +238,61 @@ export const AdminDashboard: React.FC = () => {
       refreshData();
     } else {
       toast.error(result.error || 'Failed to add lecturer');
+    }
+  };
+
+  // Enrollment management handlers
+  const toggleCourseEnrollments = (courseId: string) => {
+    if (expandedCourseId === courseId) {
+      setExpandedCourseId(null);
+      setCourseEnrollments([]);
+    } else {
+      setExpandedCourseId(courseId);
+      const enrolled = getEnrolledStudents(courseId);
+      // If no explicit enrollments, show programme+level matched students
+      if (enrolled.length === 0) {
+        const matched = getCourseStudents(courseId);
+        setCourseEnrollments(matched.map((s: any) => ({ student: s, studentId: s.id, implied: true })));
+      } else {
+        setCourseEnrollments(enrolled);
+      }
+    }
+  };
+
+  const handleEnrollStudent = (studentId: string, courseId: string) => {
+    const result = enrollStudent(studentId, courseId);
+    if (result.success) {
+      toast.success('Student enrolled successfully!');
+      toggleCourseEnrollments(courseId); // Refresh
+      setExpandedCourseId(courseId); // Re-expand
+    } else {
+      toast.error(result.error || 'Failed to enroll student');
+    }
+  };
+
+  const handleUnenrollStudent = (studentId: string, courseId: string, studentName: string) => {
+    if (window.confirm(`Remove ${studentName} from this course?`)) {
+      const result = unenrollStudent(studentId, courseId);
+      if (result.success) {
+        toast.success(`${studentName} unenrolled`);
+        // Refresh enrollments
+        const enrolled = getEnrolledStudents(courseId);
+        setCourseEnrollments(enrolled);
+      } else {
+        toast.error(result.error || 'Failed to unenroll');
+      }
+    }
+  };
+
+  const handleAutoEnroll = (courseId: string) => {
+    const result = autoEnrollStudents(courseId);
+    if (result.success) {
+      toast.success(result.message || `Auto-enrolled ${result.enrolled} students`);
+      // Refresh enrollments
+      const enrolled = getEnrolledStudents(courseId);
+      setCourseEnrollments(enrolled);
+    } else {
+      toast.error(result.error || 'Failed to auto-enroll');
     }
   };
 
@@ -247,6 +318,24 @@ export const AdminDashboard: React.FC = () => {
   const isLecturersView = currentView.startsWith('/admin/lecturers');
   const isStudentsView = currentView.startsWith('/admin/students');
 
+  const handleExportSystemCSV = (programme?: string, level?: string) => {
+    const csv = exportAllAttendanceCSV(programme, level);
+    if (!csv) {
+      toast.error('No attendance records found to export');
+      return;
+    }
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `smartattend_all_records_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success('System attendance report exported successfully!');
+  };
+
   return (
     <div className="flex h-screen bg-gray-50">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -257,18 +346,27 @@ export const AdminDashboard: React.FC = () => {
           {/* ===== DASHBOARD VIEW ===== */}
           {isDashboard && (
             <>
-              <div className="flex items-center gap-3 mb-6 lg:mb-8">
-                <button
-                  onClick={() => setSidebarOpen(true)}
-                  className="lg:hidden p-2 rounded-lg hover:bg-gray-200 transition-colors"
-                  aria-label="Open menu"
-                >
-                  <Menu className="w-6 h-6 text-gray-700" />
-                </button>
-                <div>
-                  <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-                  <p className="text-gray-600">System overview and management</p>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 lg:mb-8">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setSidebarOpen(true)}
+                    className="lg:hidden p-2 rounded-lg hover:bg-gray-200 transition-colors"
+                    aria-label="Open menu"
+                  >
+                    <Menu className="w-6 h-6 text-gray-700" />
+                  </button>
+                  <div>
+                    <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+                    <p className="text-gray-600">System overview and management</p>
+                  </div>
                 </div>
+                <button
+                  onClick={() => handleExportSystemCSV()}
+                  className="px-4 py-2 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2 self-start sm:self-auto text-sm shadow-sm"
+                >
+                  <FileSpreadsheet className="w-4 h-4" />
+                  Export All Attendance (CSV)
+                </button>
               </div>
 
               {/* Stats Cards */}
@@ -449,65 +547,182 @@ export const AdminDashboard: React.FC = () => {
                         ).length;
 
                         return (
-                          <tr key={course.id} className="hover:bg-gray-50">
-                            <td className="px-4 lg:px-6 py-4">
-                              <p className="font-medium text-gray-900 text-sm">{course.courseName}</p>
-                              <p className="text-xs text-gray-500 font-mono">{course.courseCode}</p>
-                            </td>
-                            <td className="px-4 lg:px-6 py-4 text-sm text-gray-600 hidden sm:table-cell">{course.programme}</td>
-                            <td className="px-4 lg:px-6 py-4 text-sm text-gray-600 hidden md:table-cell">{course.level}</td>
-                            <td className="px-4 lg:px-6 py-4">
-                              {editingCourseId === course.id ? (
-                                <div className="flex items-center gap-2">
-                                  <select
-                                    value={editLecturerId}
-                                    onChange={(e) => setEditLecturerId(e.target.value)}
-                                    className="text-sm border border-gray-300 rounded-lg px-2 py-1 focus:ring-2 focus:ring-ttu-navy focus:border-transparent"
-                                  >
-                                    <option value="">Select...</option>
-                                    {lecturers.map((l: any) => (
-                                      <option key={l.id} value={l.id}>{l.name}</option>
-                                    ))}
-                                  </select>
+                          <React.Fragment key={course.id}>
+                            <tr className="hover:bg-gray-50">
+                              <td className="px-4 lg:px-6 py-4">
+                                <p className="font-medium text-gray-900 text-sm">{course.courseName}</p>
+                                <p className="text-xs text-gray-500 font-mono">{course.courseCode}</p>
+                              </td>
+                              <td className="px-4 lg:px-6 py-4 text-sm text-gray-600 hidden sm:table-cell">{course.programme}</td>
+                              <td className="px-4 lg:px-6 py-4 text-sm text-gray-600 hidden md:table-cell">{course.level}</td>
+                              <td className="px-4 lg:px-6 py-4">
+                                {editingCourseId === course.id ? (
+                                  <div className="flex items-center gap-2">
+                                    <select
+                                      value={editLecturerId}
+                                      onChange={(e) => setEditLecturerId(e.target.value)}
+                                      className="text-sm border border-gray-300 rounded-lg px-2 py-1 focus:ring-2 focus:ring-ttu-navy focus:border-transparent"
+                                    >
+                                      <option value="">Select...</option>
+                                      {lecturers.map((l: any) => (
+                                        <option key={l.id} value={l.id}>{l.name}</option>
+                                      ))}
+                                    </select>
+                                    <button
+                                      onClick={() => handleReassignLecturer(course.id)}
+                                      className="p-1 text-green-600 hover:bg-green-100 rounded"
+                                    >
+                                      <Save className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => { setEditingCourseId(null); setEditLecturerId(''); }}
+                                      className="p-1 text-gray-400 hover:bg-gray-100 rounded"
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm text-gray-900">{course.lecturer?.name || 'Unassigned'}</span>
+                                    <button
+                                      onClick={() => { setEditingCourseId(course.id); setEditLecturerId(course.lecturerId); }}
+                                      className="p-1 text-gray-400 hover:text-ttu-navy hover:bg-ttu-navy-50 rounded transition-colors"
+                                      title="Reassign lecturer"
+                                    >
+                                      <Edit3 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                )}
+                              </td>
+                              <td className="px-4 lg:px-6 py-4 text-sm text-gray-600 hidden lg:table-cell">
+                                {studentCount}
+                              </td>
+                              <td className="px-4 lg:px-6 py-4 text-right">
+                                <div className="flex items-center justify-end gap-1">
                                   <button
-                                    onClick={() => handleReassignLecturer(course.id)}
-                                    className="p-1 text-green-600 hover:bg-green-100 rounded"
+                                    onClick={() => toggleCourseEnrollments(course.id)}
+                                    className="p-2 text-gray-400 hover:text-ttu-navy hover:bg-ttu-navy-50 rounded-lg transition-colors"
+                                    title="Manage enrollments"
                                   >
-                                    <Save className="w-4 h-4" />
+                                    <UsersRound className="w-4 h-4" />
                                   </button>
                                   <button
-                                    onClick={() => { setEditingCourseId(null); setEditLecturerId(''); }}
-                                    className="p-1 text-gray-400 hover:bg-gray-100 rounded"
+                                    onClick={() => handleDeleteCourse(course.id, course.courseName)}
+                                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                    title="Delete course"
                                   >
-                                    <X className="w-4 h-4" />
+                                    <Trash2 className="w-4 h-4" />
                                   </button>
                                 </div>
-                              ) : (
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm text-gray-900">{course.lecturer?.name || 'Unassigned'}</span>
-                                  <button
-                                    onClick={() => { setEditingCourseId(course.id); setEditLecturerId(course.lecturerId); }}
-                                    className="p-1 text-gray-400 hover:text-ttu-navy hover:bg-ttu-navy-50 rounded transition-colors"
-                                    title="Reassign lecturer"
-                                  >
-                                    <Edit3 className="w-3.5 h-3.5" />
-                                  </button>
-                                </div>
-                              )}
-                            </td>
-                            <td className="px-4 lg:px-6 py-4 text-sm text-gray-600 hidden lg:table-cell">
-                              {studentCount}
-                            </td>
-                            <td className="px-4 lg:px-6 py-4 text-right">
-                              <button
-                                onClick={() => handleDeleteCourse(course.id, course.courseName)}
-                                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                title="Delete course"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </td>
-                          </tr>
+                              </td>
+                            </tr>
+
+                            {/* Enrollment Management Expandable Row */}
+                            {expandedCourseId === course.id && (
+                              <tr>
+                                <td colSpan={6} className="px-4 lg:px-6 py-4 bg-gray-50 border-t border-gray-100">
+                                  <div className="space-y-4">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                      <h4 className="font-semibold text-gray-800 flex items-center gap-2">
+                                        <UsersRound className="w-4 h-4 text-ttu-navy" />
+                                        Enrolled Students ({courseEnrollments.length})
+                                      </h4>
+                                      <div className="flex gap-2">
+                                        <button
+                                          onClick={() => handleAutoEnroll(course.id)}
+                                          className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-medium hover:bg-emerald-700 transition-colors flex items-center gap-1.5"
+                                        >
+                                          <UsersRound className="w-3.5 h-3.5" />
+                                          Auto-Enroll ({course.programme} {course.level})
+                                        </button>
+                                        <button
+                                          onClick={() => { setShowEnrollModal(true); setEnrollSearchQuery(''); }}
+                                          className="px-3 py-1.5 bg-ttu-navy text-white rounded-lg text-xs font-medium hover:bg-ttu-navy-dark transition-colors flex items-center gap-1.5"
+                                        >
+                                          <UserPlus className="w-3.5 h-3.5" />
+                                          Enroll Student
+                                        </button>
+                                      </div>
+                                    </div>
+
+                                    {/* Enroll Modal Inline */}
+                                    {showEnrollModal && (
+                                      <div className="bg-white border border-gray-200 rounded-lg p-4">
+                                        <div className="flex items-center justify-between mb-3">
+                                          <h5 className="font-medium text-gray-800 text-sm">Select Student to Enroll</h5>
+                                          <button onClick={() => setShowEnrollModal(false)} className="text-gray-400 hover:text-gray-600">
+                                            <X className="w-4 h-4" />
+                                          </button>
+                                        </div>
+                                        <input
+                                          type="text"
+                                          value={enrollSearchQuery}
+                                          onChange={(e) => setEnrollSearchQuery(e.target.value)}
+                                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-ttu-navy focus:border-transparent mb-3"
+                                          placeholder="Search by name or student ID..."
+                                        />
+                                        <div className="max-h-48 overflow-y-auto space-y-1">
+                                          {students
+                                            .filter((s: any) => {
+                                              const q = enrollSearchQuery.toLowerCase();
+                                              if (!q) return true;
+                                              return s.name?.toLowerCase().includes(q) || s.studentId?.toLowerCase().includes(q);
+                                            })
+                                            .filter((s: any) => !courseEnrollments.some((e: any) => (e.studentId || e.student?.id) === s.id))
+                                            .slice(0, 20)
+                                            .map((s: any) => (
+                                              <div key={s.id} className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50">
+                                                <div>
+                                                  <p className="text-sm font-medium text-gray-900">{s.name}</p>
+                                                  <p className="text-xs text-gray-500">{s.studentId} · {s.programme} · {s.level}</p>
+                                                </div>
+                                                <button
+                                                  onClick={() => handleEnrollStudent(s.id, course.id)}
+                                                  className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded text-xs font-medium hover:bg-emerald-200 transition-colors"
+                                                >
+                                                  Enroll
+                                                </button>
+                                              </div>
+                                            ))}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Enrolled Students List */}
+                                    {courseEnrollments.length > 0 ? (
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                                        {courseEnrollments.map((enrollment: any) => (
+                                          <div
+                                            key={enrollment.student?.id || enrollment.studentId}
+                                            className="flex items-center justify-between px-3 py-2 bg-white border border-gray-200 rounded-lg"
+                                          >
+                                            <div className="min-w-0">
+                                              <p className="text-sm font-medium text-gray-900 truncate">{enrollment.student?.name}</p>
+                                              <p className="text-xs text-gray-500">{enrollment.student?.studentId}</p>
+                                            </div>
+                                            {!enrollment.implied && (
+                                              <button
+                                                onClick={() => handleUnenrollStudent(enrollment.student?.id || enrollment.studentId, course.id, enrollment.student?.name)}
+                                                className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors flex-shrink-0 ml-2"
+                                                title="Unenroll"
+                                              >
+                                                <UserMinus className="w-3.5 h-3.5" />
+                                              </button>
+                                            )}
+                                            {enrollment.implied && (
+                                              <span className="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded font-medium flex-shrink-0 ml-2">Auto</span>
+                                            )}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <p className="text-sm text-gray-500 italic">No students enrolled. Use Auto-Enroll or add individually.</p>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </React.Fragment>
                         );
                       })}
                     </tbody>

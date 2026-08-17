@@ -1,310 +1,221 @@
-# SmartAttend - Attendance Management System
+# SmartAttend — Next-Gen University Attendance Management System
 
-A full-featured attendance management system with separate dashboards for students and lecturers, built with React, TypeScript, and Tailwind CSS.
+SmartAttend is a security-hardened, full-stack attendance management system engineered for higher education institutions (specifically tailored for Takoradi Technical University - TTU). It eliminates proxy attendance through **GPS geofencing**, **device hardware fingerprint binding**, **one-time live session passcodes**, and **configurable session auto-close timers**.
 
-## 🚀 Features
+---
 
-### Authentication System
-- **Role-based login** (Student/Lecturer)
-- **Secure session management** with localStorage
-- **Protected routes** preventing unauthorized access
-- **Automatic redirection** to role-specific dashboards
+## 🚀 Key Features
 
-### Student Dashboard
-- ✅ View personal profile (Name, Student ID, Course, Level)
-- ✅ View all enrolled courses
-- ✅ Mark attendance for each course
-- ✅ Prevent duplicate attendance for the same day
-- ✅ View attendance history with course details
-- ✅ Real-time attendance percentage per course
-- ✅ Clean, card-based UI design
+### 1. 📍 GPS Geofencing & Haversine Distance Verification
+- Lecturers initiate live attendance sessions with their current GPS coordinates.
+- Students must be physically located within a **50-meter radius** (server-calculated via Haversine formula) to mark attendance.
+- Coordinates and distances are logged and audited on both server and client.
 
-### Lecturer Dashboard
-- ✅ Create and manage courses
-- ✅ View all assigned courses
-- ✅ View enrolled students per course
-- ✅ View attendance records by course and date range
-- ✅ Search students by name or ID
-- ✅ Filter attendance by date range
-- ✅ **Download attendance reports as PDF** (with jsPDF)
-- ✅ Attendance analytics with charts (using Recharts)
-- ✅ Course statistics (total sessions, average attendance, etc.)
+### 2. 📱 Hardware Device Fingerprint Binding (Anti-Proxy)
+- Each student account is cryptographically bound to their device browser on first login.
+- Prevents students from logging in on friends' phones to mark proxy attendance.
+- Administrators have one-click **"Reset Device"** controls if a student switches hardware or browsers.
 
-### PDF Generation
-- Course name and code
-- Date range filter
-- Student names and IDs
-- Attendance status
-- Timestamp
-- Statistical summary
+### 3. ⏳ Session Auto-Close & Real-Time Countdown
+- Lecturers can set configurable session durations (**15m, 30m, 45m, 1h, 1.5h, 2h, or Until Stopped**).
+- Real-time countdown timer displayed on active lecturer sessions.
+- Sessions automatically expire on the backend and frontend when the timer runs out.
 
-## 📦 Tech Stack
+### 4. 👥 Explicit Student Enrollment Management
+- Manage student course enrollments explicitly with single and bulk enrollment options.
+- **Bulk Auto-Enrollment**: Automatically enroll students matching course programme and level.
+- Lecturers and Administrators can view enrolled rosters and unenroll students when needed.
 
-- **Frontend**: React 18 with TypeScript
+### 5. 📊 Enhanced Reports & PDF / CSV Exports
+- **CSV / Excel Export**: One-click download of clean, structured attendance sheets with student details, timestamps, and course metadata.
+- **Admin System-Wide Reports**: Export attendance records across all courses and programmes.
+- **PDF Report Generation**: Formatted PDF attendance sheets with statistical summaries powered by `jsPDF` and `jspdf-autotable`.
+
+### 6. 🌓 Persistent Dark / Light Mode
+- Seamless theme switching with smooth CSS transitions across all views, tables, cards, charts, and modals.
+- Persisted in browser `localStorage` and synchronized across user sessions.
+
+---
+
+## 📦 Architecture & Tech Stack
+
+### Frontend
+- **Framework**: React 18 with TypeScript
+- **Bundler / Server**: Vite
 - **Routing**: React Router v7
-- **Styling**: Tailwind CSS v4
-- **Charts**: Recharts
-- **PDF Generation**: jsPDF + jspdf-autotable
+- **Styling**: Tailwind CSS v4 & custom theme design system
+- **Charts & Visualizations**: Recharts
 - **Icons**: Lucide React
-- **Notifications**: Sonner
-- **Data Storage**: localStorage (simulated backend)
+- **Notifications**: Sonner (Toast notifications)
+- **PDF Generation**: jsPDF + jspdf-autotable
+
+### Backend
+- **Runtime**: Node.js with TypeScript & Express
+- **ORM**: Prisma Client v5 / v7
+- **Database**: SQLite (`prisma/dev.db`)
+- **Security**: JSON Web Tokens (JWT), Argon2/bcrypt password hashing, CORS, Helmet
+- **Geospatial Utilities**: Haversine distance calculation
+
+---
 
 ## 🗂️ Project Structure
 
 ```
-/src
-├── /app
-│   ├── App.tsx                          # Main app component
-│   ├── routes.ts                        # React Router configuration
-│   │
-│   ├── /context
-│   │   └── AuthContext.tsx              # Authentication state management
-│   │
-│   ├── /services
-│   │   └── mockData.ts                  # Mock database service (localStorage)
-│   │
-│   ├── /components
-│   │   ├── ProtectedRoute.tsx           # Route protection wrapper
-│   │   └── Sidebar.tsx                  # Navigation sidebar
-│   │
-│   └── /pages
-│       ├── Login.tsx                    # Login page
-│       ├── StudentDashboard.tsx         # Student dashboard
-│       └── LecturerDashboard.tsx        # Lecturer dashboard
+├── server/                          # Backend Express & Prisma application
+│   ├── prisma/
+│   │   ├── schema.prisma            # Prisma schema (User, Course, Session, Attendance, Enrollment, DeviceBinding)
+│   │   ├── dev.db                   # SQLite database
+│   │   └── seed.ts                  # Database seeder with TTU demo data
+│   ├── src/
+│   │   ├── index.ts                 # Express server entry point
+│   │   ├── db.ts                    # Prisma client singleton
+│   │   ├── middleware/
+│   │   │   └── auth.ts              # JWT authentication & RBAC middleware
+│   │   ├── routes/
+│   │   │   ├── authRoutes.ts        # Authentication & profile endpoints
+│   │   │   ├── courseRoutes.ts      # Course management endpoints
+│   │   │   ├── attendanceRoutes.ts  # Session & attendance marking endpoints
+│   │   │   ├── adminRoutes.ts       # Admin & device management endpoints
+│   │   │   └── enrollmentRoutes.ts  # Student course enrollment endpoints
+│   │   └── utils/
+│   │       └── haversine.ts         # Server-side GPS distance calculation
+│   └── package.json
 │
-└── /styles
-    ├── theme.css                        # Theme tokens
-    └── fonts.css                        # Font imports
+├── src/                             # Frontend React application
+│   ├── app/
+│   │   ├── App.tsx                  # Root application router
+│   │   ├── context/
+│   │   │   └── AuthContext.tsx      # Auth & device state provider
+│   │   ├── pages/
+│   │   │   ├── Login.tsx            # Login portal
+│   │   │   ├── StudentDashboard.tsx # Student dashboard & 1-tap marking
+│   │   │   ├── LecturerDashboard.tsx# Lecturer controls, live sessions & charts
+│   │   │   └── AdminDashboard.tsx   # Courses, lecturers, students & device resets
+│   │   ├── components/
+│   │   │   ├── Sidebar.tsx          # Responsive navigation & theme toggle
+│   │   │   ├── ProtectedRoute.tsx   # RBAC route guard
+│   │   │   └── EditProfileModal.tsx # Profile management
+│   │   └── services/
+│   │       ├── apiClient.ts         # REST API HTTP client
+│   │       ├── apiData.ts           # Frontend API integration service
+│   │       ├── geolocation.ts       # Browser GPS position service
+│   │       └── mockData.ts          # LocalStorage fallback & export helpers
+│   └── styles/
+│       ├── theme.css                # TTU Navy / Gold brand palette & dark mode
+│       └── fonts.css                # Typography
+└── package.json
 ```
 
-## 🎯 Database Structure (localStorage)
-
-### Users
-```typescript
-{
-  id: string
-  name: string
-  email: string
-  password: string
-  role: 'student' | 'lecturer'
-  studentId?: string      // Only for students
-  course?: string         // Only for students
-  level?: string          // Only for students
-}
-```
-
-### Courses
-```typescript
-{
-  id: string
-  courseName: string
-  courseCode: string
-  lecturerId: string
-}
-```
-
-### Enrollments
-```typescript
-{
-  studentId: string
-  courseId: string
-}
-```
-
-### Attendance
-```typescript
-{
-  id: string
-  studentId: string
-  courseId: string
-  date: string           // YYYY-MM-DD format
-  status: 'present' | 'absent'
-  timestamp: string      // ISO 8601 format
-}
-```
-
-## 🔑 Demo Credentials
-
-### Student Accounts
-| Name | Email | Password | Student ID |
-|------|-------|----------|------------|
-| Arhinful Emmanuel Kwabena | arhinful.emmanuel@ttu.edu.gh | student123 | BC/GRD/22/118 |
-| Joel Teye Tetteh | joel.tetteh@ttu.edu.gh | student123 | BC/GRD/22/101 |
-| Bernard Mensah Otupri | bernard.otupri@ttu.edu.gh | student123 | BC/GRD/22/149 |
-| Emmanuel Lokko | emmanuel.lokko@ttu.edu.gh | student123 | BC/GRD/22/102 |
-| Abigail Mensah | abigail.mensah@ttu.edu.gh | student123 | BC/FSD/22/045 |
-
-### Lecturer Accounts
-| Name | Email | Password |
-|------|-------|----------|
-| Mr. Ernest Kudordjie | ernest.kudordjie@ttu.edu.gh | lecturer123 |
-| Mr. Ernest Kudzordzi | ernest.kudzordzi@ttu.edu.gh | lecturer123 |
-| Mr. Nduro | nduro@ttu.edu.gh | lecturer123 |
-| Prof. Betty Fanniyan | betty.fanniyan@ttu.edu.gh | lecturer123 |
-
-### Admin Account
-| Name | Email | Password |
-|------|-------|----------|
-| System Administrator | admin@ttu.edu.gh | admin123 |
+---
 
 ## 🚦 Getting Started
 
 ### Prerequisites
-- Node.js 18+ installed
-- npm or pnpm package manager
+- **Node.js 18+** installed
+- **npm** or **pnpm**
 
-### Installation
+### 1. Install Dependencies
 
-1. **Clone the repository** (if applicable)
-   ```bash
-   git clone <repository-url>
-   cd smartattend
-   ```
+**Root (Frontend):**
+```bash
+npm install
+```
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   # or
-   pnpm install
-   ```
+**Server (Backend):**
+```bash
+cd server
+npm install
+```
 
-3. **Run the development server**
-   ```bash
-   npm run dev
-   # or
-   pnpm dev
-   ```
+### 2. Initialize Database & Run Seed
 
-4. **Open your browser**
-   Navigate to `http://localhost:5173` (or the port shown in terminal)
+Inside the `server/` directory:
+```bash
+npx prisma db push
+npx prisma db seed
+```
 
-5. **Login with demo credentials**
-   - Use any of the demo accounts listed above
-   - Students will be redirected to `/student`
-   - Lecturers will be redirected to `/lecturer`
+### 3. Run Applications
 
-## 📖 Usage Guide
+**Start the Backend Server (Port 5000):**
+```bash
+cd server
+npm run dev
+```
 
-### For Students
+**Start the Frontend App (Port 5173):**
+```bash
+# In the project root directory:
+npm run dev
+```
 
-1. **Login** with student credentials
-2. **View your profile** - See your name, student ID, course, and level
-3. **Mark attendance** - Click "Mark Attendance" button on any enrolled course card
-4. **View attendance history** - Scroll down to see your complete attendance records
-5. **Check attendance percentage** - Each course card shows your attendance rate
-
-### For Lecturers
-
-1. **Login** with lecturer credentials
-2. **View dashboard statistics** - See total courses, students, sessions, and average attendance
-3. **Select a course** - Use the dropdown to switch between your courses
-4. **Create new course** - Click "Create Course" button and fill in details
-5. **View attendance records** - See all attendance records in a table format
-6. **Filter records**:
-   - Use search to find specific students
-   - Set start and end dates to filter by date range
-7. **Download PDF report** - Click "Download PDF" to generate a comprehensive report
-8. **View enrolled students** - Scroll down to see all students in the selected course
-9. **Analyze trends** - View the attendance chart showing the last 7 days
-
-## 🔒 Security Features
-
-- ✅ Password-based authentication
-- ✅ Role-based access control (RBAC)
-- ✅ Protected routes (cannot access other role's dashboard)
-- ✅ Session persistence with localStorage
-- ✅ Automatic logout functionality
-- ✅ Input validation for course creation
-
-## 🎨 UI/UX Features
-
-- Modern, clean dashboard design
-- Responsive layout (works on mobile and desktop)
-- Sidebar navigation
-- Card-based components
-- Interactive charts and graphs
-- Toast notifications for user actions
-- Loading states for async operations
-- Empty states with helpful messages
-- Hover effects and smooth transitions
-
-## 🔧 Key Functions
-
-### Student Functions
-- `getStudentCourses(studentId)` - Get all enrolled courses
-- `markAttendance(studentId, courseId)` - Mark attendance (prevents duplicates)
-- `getStudentAttendance(studentId)` - Get attendance history
-
-### Lecturer Functions
-- `getLecturerCourses(lecturerId)` - Get all assigned courses
-- `getCourseAttendance(courseId, startDate?, endDate?)` - Get filtered attendance records
-- `getCourseStudents(courseId)` - Get enrolled students
-- `createCourse(courseName, courseCode, lecturerId)` - Create new course
-- `getAttendanceStats(courseId)` - Get course statistics
-
-## 📊 Analytics
-
-The system calculates:
-- **Per-course attendance percentage** for each student
-- **Average attendance rate** across all students in a course
-- **Total sessions** conducted
-- **Attendance trends** over time (visualized in charts)
-
-## 🌟 Advanced Features
-
-1. **Duplicate Prevention**: Students cannot mark attendance twice for the same course on the same day
-2. **Real-time Updates**: All changes are immediately reflected in the UI
-3. **Date-based Filtering**: Lecturers can filter attendance by custom date ranges
-4. **Search Functionality**: Quick search through student names and IDs
-5. **PDF Export**: Professional PDF reports with tables and statistics
-6. **Visual Analytics**: Bar charts showing attendance trends
-
-## 🛠️ Customization
-
-### Adding New Mock Data
-
-Edit `/src/app/services/mockData.ts` and add to the appropriate arrays:
-- `users` - Add students or lecturers
-- `courses` - Add new courses
-- `enrollments` - Link students to courses
-- `attendance` - Add historical attendance records
-
-### Styling
-
-All styles use Tailwind CSS classes. To customize:
-- Edit color schemes in component files
-- Modify `/src/styles/theme.css` for global theme tokens
-- All components are fully responsive by default
-
-## 📝 Notes
-
-- This is a **frontend-only application** using localStorage for data persistence
-- Data is **not shared between browsers** or devices
-- Clearing browser data will **reset the application**
-- Perfect for **demonstration** and **prototyping** purposes
-- For production use, integrate with a real backend (Node.js + MongoDB/PostgreSQL)
-
-## 🎓 Educational Use
-
-This project demonstrates:
-- React Context API for state management
-- React Router for SPA navigation
-- Protected routes implementation
-- Role-based access control
-- PDF generation in the browser
-- Data visualization with charts
-- Form handling and validation
-- LocalStorage as a data layer
-- Modern UI/UX patterns
-
-## 📄 License
-
-This project is open source and available for educational purposes.
-
-## 🤝 Support
-
-For issues or questions, please review the code structure and demo credentials above.
+Open your browser at `http://localhost:5173`.
 
 ---
 
-**Built with ❤️ using React, TypeScript, and Tailwind CSS**
+## 🔑 Demo Credentials
+
+### 👨‍🎓 Student Accounts
+| Name | Email | Password | Student ID | Programme & Level |
+|------|-------|----------|------------|-------------------|
+| Arhinful Emmanuel Kwabena | `arhinful.emmanuel@ttu.edu.gh` | `student123` | `BC/GRD/22/118` | BTech Graphic Design, Level 300 |
+| Joel Teye Tetteh | `joel.tetteh@ttu.edu.gh` | `student123` | `BC/GRD/22/101` | BTech Graphic Design, Level 300 |
+| Bernard Mensah Otupri | `bernard.otupri@ttu.edu.gh` | `student123` | `BC/GRD/22/149` | BTech Graphic Design, Level 300 |
+| Emmanuel Lokko | `emmanuel.lokko@ttu.edu.gh` | `student123` | `BC/GRD/22/102` | BTech Graphic Design, Level 300 |
+| Abigail Mensah | `abigail.mensah@ttu.edu.gh` | `student123` | `BC/FSD/22/045` | BTech Fashion Design, Level 300 |
+
+### 👨‍🏫 Lecturer Accounts
+| Name | Email | Password | Role |
+|------|-------|----------|------|
+| Mr. Ernest Kudordjie | `ernest.kudordjie@ttu.edu.gh` | `lecturer123` | Lecturer |
+| Mr. Ernest Kudzordzi | `ernest.kudzordzi@ttu.edu.gh` | `lecturer123` | Lecturer |
+| Mr. Nduro | `nduro@ttu.edu.gh` | `lecturer123` | Lecturer |
+| Prof. Betty Fanniyan | `betty.fanniyan@ttu.edu.gh` | `lecturer123` | Lecturer |
+
+### 🛡️ Admin Account
+| Name | Email | Password | Role |
+|------|-------|----------|------|
+| System Administrator | `admin@ttu.edu.gh` | `admin123` | Administrator |
+
+---
+
+## 📡 REST API Documentation
+
+### Auth (`/api/auth`)
+- `POST /api/auth/register` — Register a new student or lecturer
+- `POST /api/auth/login` — Authenticate and receive JWT token + device binding check
+- `GET /api/auth/me` — Retrieve current authenticated user profile
+- `PUT /api/auth/profile` — Update user profile information
+- `POST /api/auth/change-password` — Change account password
+
+### Courses (`/api/courses`)
+- `GET /api/courses` — Get courses (filtered by user role: assigned for lecturers, enrolled for students)
+- `POST /api/courses` — Create a new course (Admin only)
+- `PUT /api/courses/:id` — Update course details or reassign lecturer (Admin only)
+- `DELETE /api/courses/:id` — Delete a course and associated records (Admin only)
+
+### Attendance & Live Sessions (`/api/attendance`)
+- `POST /api/attendance/session/start` — Start live GPS attendance session with duration (`durationMinutes`)
+- `POST /api/attendance/session/end` — Manually close active attendance session
+- `GET /api/attendance/session/active/:courseId` — Get active session (auto-closes expired sessions)
+- `POST /api/attendance/mark` — Mark student attendance with GPS coordinates + Haversine check
+- `POST /api/attendance/manual` — Manually mark attendance (Lecturer/Admin)
+- `GET /api/attendance/records` — Fetch attendance records with date and course filters
+
+### Student Enrollment (`/api/enrollments`)
+- `POST /api/enrollments/enroll` — Explicitly enroll student(s) into a course
+- `POST /api/enrollments/unenroll` — Unenroll student from a course
+- `GET /api/enrollments/course/:courseId` — Get enrolled students for a course
+- `GET /api/enrollments/student/:studentId` — Get courses enrolled by a student
+- `POST /api/enrollments/auto-enroll/:courseId` — Bulk auto-enroll students by programme & level
+
+### Admin & Security (`/api/admin`)
+- `GET /api/admin/users` — List all registered system users
+- `PUT /api/admin/users/:id` — Update user record
+- `DELETE /api/admin/users/:id` — Delete user account and cascade cleanup
+- `POST /api/admin/device/reset` — Reset student hardware device lock
+
+---
+
+## 📄 License
+This project is open source and available for institutional and educational deployment.

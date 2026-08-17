@@ -5,10 +5,22 @@ import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth.
 
 export const attendanceRouter = Router();
 
+// Helper: auto-close expired sessions
+const autoCloseExpiredSessions = async () => {
+  const now = new Date();
+  await prisma.attendanceSession.updateMany({
+    where: {
+      isActive: true,
+      expiresAt: { not: null, lte: now },
+    },
+    data: { isActive: false, endedAt: now },
+  });
+};
+
 // Start Live Attendance Session (Lecturer)
 attendanceRouter.post('/session/start', authenticateToken, requireRole(['lecturer']), async (req: AuthRequest, res) => {
   try {
-    const { courseId, latitude, longitude, radiusMeters, customOtp } = req.body;
+    const { courseId, latitude, longitude, radiusMeters, customOtp, durationMinutes } = req.body;
 
     if (!courseId || latitude === undefined || longitude === undefined) {
       return res.status(400).json({ success: false, error: 'Course ID and GPS coordinates required' });
@@ -23,6 +35,12 @@ attendanceRouter.post('/session/start', authenticateToken, requireRole(['lecture
     // Generate random 6-digit OTP passcode
     const otpCode = customOtp || Math.floor(100000 + Math.random() * 900000).toString();
 
+    // Compute expiry time (0 or null = no auto-close)
+    const duration = durationMinutes ? parseInt(durationMinutes) : 30;
+    const expiresAt = duration > 0
+      ? new Date(Date.now() + duration * 60 * 1000)
+      : null;
+
     const session = await prisma.attendanceSession.create({
       data: {
         courseId,
@@ -32,6 +50,8 @@ attendanceRouter.post('/session/start', authenticateToken, requireRole(['lecture
         radiusMeters: radiusMeters ? parseFloat(radiusMeters) : 50.0,
         otpCode,
         isActive: true,
+        durationMinutes: duration,
+        expiresAt,
       },
     });
 
@@ -57,10 +77,14 @@ attendanceRouter.post('/session/end', authenticateToken, requireRole(['lecturer'
   }
 });
 
-// Get Active Session for Course
+// Get Active Session for Course (auto-closes expired sessions)
 attendanceRouter.get('/session/active/:courseId', authenticateToken, async (req, res) => {
   try {
     const { courseId } = req.params;
+
+    // Auto-close any expired sessions first
+    await autoCloseExpiredSessions();
+
     const session = await prisma.attendanceSession.findFirst({
       where: { courseId, isActive: true },
     });
@@ -79,6 +103,9 @@ attendanceRouter.post('/mark', authenticateToken, requireRole(['student']), asyn
     if (!courseId || latitude === undefined || longitude === undefined) {
       return res.status(400).json({ success: false, error: 'Course ID and location coordinates required' });
     }
+
+    // Auto-close expired sessions before checking
+    await autoCloseExpiredSessions();
 
     const session = await prisma.attendanceSession.findFirst({
       where: { courseId, isActive: true },

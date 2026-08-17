@@ -24,6 +24,7 @@ model User {
   attendanceRecords  AttendanceRecord[]
   deviceBinding      DeviceBinding?
   createdSessions    AttendanceSession[]
+  enrollments        Enrollment[]
 }
 
 model Course {
@@ -40,19 +41,22 @@ model Course {
   lecturer    User?               @relation("LecturerCourses", fields: [lecturerId], references: [id], onDelete: SetNull)
   sessions    AttendanceSession[]
   attendances AttendanceRecord[]
+  enrollments Enrollment[]
 }
 
 model AttendanceSession {
-  id           String    @id @default(uuid())
-  courseId     String
-  lecturerId   String
-  latitude     Float
-  longitude    Float
-  radiusMeters Float     @default(50.0)
-  otpCode      String?
-  isActive     Boolean   @default(true)
-  createdAt    DateTime  @default(now())
-  endedAt      DateTime?
+  id              String    @id @default(uuid())
+  courseId         String
+  lecturerId       String
+  latitude         Float
+  longitude        Float
+  radiusMeters     Float     @default(50.0)
+  otpCode          String?
+  isActive         Boolean   @default(true)
+  durationMinutes  Int       @default(30)
+  createdAt        DateTime  @default(now())
+  expiresAt        DateTime?
+  endedAt          DateTime?
 
   course       Course             @relation(fields: [courseId], references: [id], onDelete: Cascade)
   lecturer     User               @relation(fields: [lecturerId], references: [id])
@@ -77,6 +81,18 @@ model AttendanceRecord {
   session AttendanceSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
 
   @@unique([studentId, courseId, date])
+}
+
+model Enrollment {
+  id         String   @id @default(uuid())
+  studentId  String
+  courseId    String
+  enrolledAt DateTime @default(now())
+
+  student User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, courseId])
 }
 
 model DeviceBinding {

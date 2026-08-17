@@ -7,6 +7,7 @@ import { authRouter } from './routes/authRoutes.js';
 import { courseRouter } from './routes/courseRoutes.js';
 import { attendanceRouter } from './routes/attendanceRoutes.js';
 import { adminRouter } from './routes/adminRoutes.js';
+import { enrollmentRouter } from './routes/enrollmentRoutes.js';
 
 dotenv.config();
 
@@ -56,6 +57,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/courses', courseRouter);
 app.use('/api/attendance', attendanceRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/enrollments', enrollmentRouter);
 
 app.listen(PORT, () => {
   console.log(`🚀 SmartAttend Security-Hardened Production Server running on port ${PORT}`);

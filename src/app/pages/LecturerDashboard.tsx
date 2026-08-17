@@ -67,6 +67,8 @@ export const LecturerDashboard: React.FC = () => {
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showSessionHistory, setShowSessionHistory] = useState(false);
   const [sessionHistory, setSessionHistory] = useState<any[]>([]);
+  const [sessionDuration, setSessionDuration] = useState(30);
+  const [countdown, setCountdown] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -112,6 +114,36 @@ export const LecturerDashboard: React.FC = () => {
     return () => clearInterval(interval);
   }, [activeCode, selectedCourse]);
 
+  // Countdown timer for active sessions with auto-close
+  useEffect(() => {
+    if (!activeCode || !activeCode.expiresAt) {
+      setCountdown(null);
+      return;
+    }
+
+    const tick = () => {
+      const now = Date.now();
+      const expiresAt = new Date(activeCode.expiresAt).getTime();
+      const remaining = expiresAt - now;
+
+      if (remaining <= 0) {
+        // Auto-close the session
+        handleEndSession();
+        setCountdown(null);
+        toast.info('Session auto-closed — time expired.');
+        return;
+      }
+
+      const mins = Math.floor(remaining / 60000);
+      const secs = Math.floor((remaining % 60000) / 1000);
+      setCountdown(`${mins}:${secs.toString().padStart(2, '0')}`);
+    };
+
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [activeCode]);
+
   const handleStartSession = async () => {
     if (!selectedCourse || !user) return;
     setStartingSession(true);
@@ -122,10 +154,12 @@ export const LecturerDashboard: React.FC = () => {
         selectedCourse.id,
         user.id,
         position.latitude,
-        position.longitude
+        position.longitude,
+        sessionDuration
       );
       setActiveCode(newSession);
-      toast.success('Attendance session started! Your location has been captured.');
+      const durationLabel = sessionDuration > 0 ? `(${sessionDuration} min)` : '(Until stopped)';
+      toast.success(`Attendance session started ${durationLabel}! Your location has been captured.`);
     } catch (err: any) {
       toast.error(err.message || 'Failed to get location. Please enable GPS.');
     } finally {
@@ -559,10 +593,32 @@ export const LecturerDashboard: React.FC = () => {
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3 sm:self-end">
+                {/* Duration Selector */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Session Duration
+                  </label>
+                  <select
+                    value={sessionDuration}
+                    onChange={(e) => setSessionDuration(parseInt(e.target.value))}
+                    disabled={!!activeCode}
+                    className="w-full lg:w-auto px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ttu-navy focus:border-transparent text-sm disabled:opacity-50"
+                  >
+                    <option value={15}>15 minutes</option>
+                    <option value={30}>30 minutes</option>
+                    <option value={45}>45 minutes</option>
+                    <option value={60}>1 hour</option>
+                    <option value={90}>1.5 hours</option>
+                    <option value={120}>2 hours</option>
+                    <option value={0}>Until I stop</option>
+                  </select>
+                </div>
+
+                <div className="sm:self-end">
                 <button
                   onClick={handleStartSession}
                   disabled={!selectedCourse || !!activeCode || startingSession}
-                  className="px-4 py-2 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed w-full"
                 >
                   {startingSession ? (
                     <>
@@ -576,6 +632,7 @@ export const LecturerDashboard: React.FC = () => {
                     </>
                   )}
                 </button>
+                </div>
               </div>
             </div>
           </div>
@@ -616,10 +673,28 @@ export const LecturerDashboard: React.FC = () => {
 
                   <p className="text-xs text-emerald-200 mt-3">
                     Instant 1-Tap Attendance enabled • Started at {new Date(activeCode.createdAt).toLocaleTimeString()}
+                    {activeCode.durationMinutes > 0 && ` • Duration: ${activeCode.durationMinutes} min`}
                   </p>
                 </div>
 
                 <div className="flex flex-row lg:flex-col gap-3 w-full lg:w-auto">
+                  {/* Countdown Timer */}
+                  {countdown && (
+                    <div className="flex-1 lg:flex-initial bg-white/15 backdrop-blur-sm rounded-xl px-5 py-3 text-center">
+                      <p className="text-emerald-200 text-xs mb-1">Time Remaining</p>
+                      <p className={`text-2xl font-extrabold font-mono ${
+                        countdown && parseInt(countdown.split(':')[0]) < 5 ? 'text-yellow-300' : 'text-white'
+                      }`}>
+                        {countdown}
+                      </p>
+                    </div>
+                  )}
+                  {!countdown && activeCode.durationMinutes === 0 && (
+                    <div className="flex-1 lg:flex-initial bg-white/15 backdrop-blur-sm rounded-xl px-5 py-3 text-center">
+                      <p className="text-emerald-200 text-xs mb-1">Duration</p>
+                      <p className="text-lg font-bold text-white">Until Stopped</p>
+                    </div>
+                  )}
                   <button
                     onClick={handleEndSession}
                     className="flex-1 lg:flex-initial px-5 py-3 bg-red-500/90 hover:bg-red-600 text-white rounded-xl font-bold shadow-md transition-all flex items-center justify-center gap-2 text-sm cursor-pointer"

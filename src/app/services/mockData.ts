@@ -296,6 +296,24 @@ export const initializeMockData = () => {
     localStorage.setItem('users', JSON.stringify(users));
     localStorage.setItem('courses', JSON.stringify(courses));
     localStorage.setItem('attendance', JSON.stringify(attendance));
+
+    // Auto-generate enrollments based on programme+level matching
+    const enrollments: any[] = [];
+    const studentUsers = users.filter((u: any) => u.role === 'student');
+    courses.forEach((course: any) => {
+      studentUsers.forEach((student: any) => {
+        if (student.programme === course.programme && student.level === course.level) {
+          enrollments.push({
+            id: `enr_${student.id}_${course.id}`,
+            studentId: student.id,
+            courseId: course.id,
+            enrolledAt: new Date().toISOString(),
+          });
+        }
+      });
+    });
+    localStorage.setItem('enrollments', JSON.stringify(enrollments));
+
     localStorage.setItem('initialized_v2', 'true');
   }
 };
@@ -304,15 +322,24 @@ export const initializeMockData = () => {
 // Student Functions
 // ============================================================
 
-// Get courses for a student — auto-matched by programme + level
+// Get courses for a student — uses enrollment table, falls back to programme+level
 export const getStudentCourses = (studentId: string) => {
   const users = JSON.parse(localStorage.getItem('users') || '[]');
   const courses = JSON.parse(localStorage.getItem('courses') || '[]');
+  const enrollments = JSON.parse(localStorage.getItem('enrollments') || '[]');
   const student = users.find((u: any) => u.id === studentId);
 
   if (!student) return [];
 
-  // Return courses matching the student's programme and level
+  // Check for explicit enrollments first
+  const studentEnrollments = enrollments.filter((e: any) => e.studentId === studentId);
+  if (studentEnrollments.length > 0) {
+    return courses.filter((c: any) =>
+      studentEnrollments.some((e: any) => e.courseId === c.id)
+    );
+  }
+
+  // Fallback: return courses matching the student's programme and level
   return courses.filter(
     (c: any) => c.programme === student.programme && c.level === student.level
   );
@@ -405,12 +432,13 @@ export const getLecturerCourses = (lecturerId: string) => {
   return courses.filter((c: any) => c.lecturerId === lecturerId);
 };
 
-// Start an attendance session — stores lecturer GPS for geofencing
+// Start an attendance session — stores lecturer GPS for geofencing (with auto-close)
 export const startAttendanceSession = (
   courseId: string,
   lecturerId: string,
   lecturerLat: number,
-  lecturerLng: number
+  lecturerLng: number,
+  durationMinutes: number = 30
 ) => {
   const codes = JSON.parse(localStorage.getItem('attendanceCodes') || '[]');
 
@@ -428,6 +456,11 @@ export const startAttendanceSession = (
     code += chars.charAt(Math.floor(Math.random() * chars.length));
   }
 
+  // Compute expiry time (0 = no auto-close)
+  const expiresAt = durationMinutes > 0
+    ? new Date(Date.now() + durationMinutes * 60 * 1000).toISOString()
+    : null;
+
   const newSession = {
     id: `code${Date.now()}`,
     courseId,
@@ -438,6 +471,8 @@ export const startAttendanceSession = (
     lecturerLat,
     lecturerLng,
     radiusMeters: GEOFENCE_RADIUS_METERS,
+    durationMinutes,
+    expiresAt,
   };
 
   codes.push(newSession);
@@ -446,9 +481,23 @@ export const startAttendanceSession = (
   return newSession;
 };
 
-// Get the currently active attendance code for a course
+// Get the currently active attendance code for a course (auto-closes expired)
 export const getActiveCode = (courseId: string) => {
   const codes = JSON.parse(localStorage.getItem('attendanceCodes') || '[]');
+  const now = new Date();
+
+  // Auto-close expired sessions
+  let changed = false;
+  codes.forEach((c: any) => {
+    if (c.active && c.expiresAt && new Date(c.expiresAt) <= now) {
+      c.active = false;
+      changed = true;
+    }
+  });
+  if (changed) {
+    localStorage.setItem('attendanceCodes', JSON.stringify(codes));
+  }
+
   return codes.find((c: any) => c.courseId === courseId && c.active) || null;
 };
 
@@ -484,15 +533,25 @@ export const getCourseAttendance = (courseId: string, startDate?: string, endDat
   }));
 };
 
-// Get students enrolled in a course — by programme + level matching
+// Get students enrolled in a course — via enrollment table, fallback to programme+level
 export const getCourseStudents = (courseId: string) => {
   const courses = JSON.parse(localStorage.getItem('courses') || '[]');
   const users = JSON.parse(localStorage.getItem('users') || '[]');
+  const enrollments = JSON.parse(localStorage.getItem('enrollments') || '[]');
 
   const course = courses.find((c: any) => c.id === courseId);
   if (!course) return [];
 
-  // Find all students whose programme + level match this course
+  // Check for explicit enrollments first
+  const courseEnrollments = enrollments.filter((e: any) => e.courseId === courseId);
+  if (courseEnrollments.length > 0) {
+    return users.filter((u: any) =>
+      u.role === 'student' &&
+      courseEnrollments.some((e: any) => e.studentId === u.id)
+    );
+  }
+
+  // Fallback: find all students whose programme + level match this course
   return users.filter(
     (u: any) =>
       u.role === 'student' &&
@@ -576,16 +635,23 @@ export const resetDeviceBinding = (userId: string) => {
 // Get active sessions for a student's enrolled courses
 export const getActiveSessionsForStudent = (studentId: string) => {
   const users = JSON.parse(localStorage.getItem('users') || '[]');
-  const courses = JSON.parse(localStorage.getItem('courses') || '[]');
   const codes = JSON.parse(localStorage.getItem('attendanceCodes') || '[]');
-  const student = users.find((u: any) => u.id === studentId);
 
-  if (!student) return [];
+  // Get courses via enrollment-aware function
+  const studentCourses = getStudentCourses(studentId);
 
-  // Get courses matching the student's programme and level
-  const studentCourses = courses.filter(
-    (c: any) => c.programme === student.programme && c.level === student.level
-  );
+  // Auto-close expired sessions
+  const now = new Date();
+  let changed = false;
+  codes.forEach((c: any) => {
+    if (c.active && c.expiresAt && new Date(c.expiresAt) <= now) {
+      c.active = false;
+      changed = true;
+    }
+  });
+  if (changed) {
+    localStorage.setItem('attendanceCodes', JSON.stringify(codes));
+  }
 
   // Find active sessions for those courses
   const activeSessions = codes.filter(
@@ -593,6 +659,7 @@ export const getActiveSessionsForStudent = (studentId: string) => {
   );
 
   // Enrich with course data and lecturer info
+  const courses = JSON.parse(localStorage.getItem('courses') || '[]');
   return activeSessions.map((session: any) => {
     const course = courses.find((c: any) => c.id === session.courseId);
     const lecturer = users.find((u: any) => u.id === session.lecturerId);
@@ -602,6 +669,102 @@ export const getActiveSessionsForStudent = (studentId: string) => {
       lecturer,
     };
   });
+};
+
+// ============================================================
+// Enrollment Management Functions
+// ============================================================
+
+// Enroll a student in a course
+export const enrollStudent = (studentId: string, courseId: string) => {
+  const enrollments = JSON.parse(localStorage.getItem('enrollments') || '[]');
+
+  // Check for duplicate
+  const existing = enrollments.find(
+    (e: any) => e.studentId === studentId && e.courseId === courseId
+  );
+  if (existing) {
+    return { success: false, error: 'Student is already enrolled in this course' };
+  }
+
+  const newEnrollment = {
+    id: `enr_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+    studentId,
+    courseId,
+    enrolledAt: new Date().toISOString(),
+  };
+
+  enrollments.push(newEnrollment);
+  localStorage.setItem('enrollments', JSON.stringify(enrollments));
+
+  return { success: true, enrollment: newEnrollment };
+};
+
+// Unenroll a student from a course
+export const unenrollStudent = (studentId: string, courseId: string) => {
+  const enrollments = JSON.parse(localStorage.getItem('enrollments') || '[]');
+  const updated = enrollments.filter(
+    (e: any) => !(e.studentId === studentId && e.courseId === courseId)
+  );
+
+  if (updated.length === enrollments.length) {
+    return { success: false, error: 'Enrollment not found' };
+  }
+
+  localStorage.setItem('enrollments', JSON.stringify(updated));
+  return { success: true };
+};
+
+// Get all enrollments for a course
+export const getEnrolledStudents = (courseId: string) => {
+  const enrollments = JSON.parse(localStorage.getItem('enrollments') || '[]');
+  const users = JSON.parse(localStorage.getItem('users') || '[]');
+
+  return enrollments
+    .filter((e: any) => e.courseId === courseId)
+    .map((e: any) => {
+      const student = users.find((u: any) => u.id === e.studentId);
+      return { ...e, student };
+    })
+    .filter((e: any) => e.student);
+};
+
+// Auto-enroll students matching programme + level
+export const autoEnrollStudents = (courseId: string) => {
+  const courses = JSON.parse(localStorage.getItem('courses') || '[]');
+  const users = JSON.parse(localStorage.getItem('users') || '[]');
+  const enrollments = JSON.parse(localStorage.getItem('enrollments') || '[]');
+
+  const course = courses.find((c: any) => c.id === courseId);
+  if (!course) return { success: false, error: 'Course not found', enrolled: 0 };
+
+  const matchingStudents = users.filter(
+    (u: any) => u.role === 'student' && u.programme === course.programme && u.level === course.level
+  );
+
+  let enrolled = 0;
+  matchingStudents.forEach((student: any) => {
+    const exists = enrollments.some(
+      (e: any) => e.studentId === student.id && e.courseId === courseId
+    );
+    if (!exists) {
+      enrollments.push({
+        id: `enr_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        studentId: student.id,
+        courseId,
+        enrolledAt: new Date().toISOString(),
+      });
+      enrolled++;
+    }
+  });
+
+  localStorage.setItem('enrollments', JSON.stringify(enrollments));
+  return {
+    success: true,
+    enrolled,
+    total: matchingStudents.length,
+    message: `Enrolled ${enrolled} students from ${course.programme} ${course.level}`,
+  };
 };
 
 // ============================================================
@@ -1049,3 +1212,53 @@ export const exportAttendanceCSV = (courseId: string, startDate?: string, endDat
 
   return csvContent;
 };
+
+// Generate system-wide CSV report for all courses (Admin)
+export const exportAllAttendanceCSV = (programmeFilter?: string, levelFilter?: string) => {
+  const attendance = JSON.parse(localStorage.getItem('attendance') || '[]');
+  const courses = JSON.parse(localStorage.getItem('courses') || '[]');
+  const users = JSON.parse(localStorage.getItem('users') || '[]');
+
+  if (attendance.length === 0) return null;
+
+  const headers = ['Course Code', 'Course Name', 'Programme', 'Level', 'Date', 'Student Name', 'Student ID', 'Status', 'Time'];
+  
+  const filteredRecords = attendance.filter((record: any) => {
+    const course = courses.find((c: any) => c.id === record.courseId);
+    if (!course) return false;
+    if (programmeFilter && programmeFilter !== 'All' && course.programme !== programmeFilter) return false;
+    if (levelFilter && levelFilter !== 'All' && course.level !== levelFilter) return false;
+    return true;
+  });
+
+  if (filteredRecords.length === 0) return null;
+
+  const rows = filteredRecords.map((record: any) => {
+    const course = courses.find((c: any) => c.id === record.courseId) || {};
+    const student = users.find((u: any) => u.id === record.studentId) || {};
+    return [
+      course.courseCode || 'N/A',
+      course.courseName || 'N/A',
+      course.programme || 'N/A',
+      course.level || 'N/A',
+      record.date || 'N/A',
+      student.name || 'N/A',
+      student.studentId || 'N/A',
+      record.status === 'present' ? 'Present' : 'Absent',
+      record.timestamp ? new Date(record.timestamp).toLocaleTimeString() : 'N/A',
+    ];
+  });
+
+  const csvContent = [
+    `SmartAttend System-Wide Attendance Report`,
+    `Filter: Programme: ${programmeFilter || 'All'} | Level: ${levelFilter || 'All'}`,
+    `Total Records: ${rows.length}`,
+    `Generated: ${new Date().toLocaleString()}`,
+    '',
+    headers.join(','),
+    ...rows.map((row: string[]) => row.map(cell => `"${cell}"`).join(',')),
+  ].join('\n');
+
+  return csvContent;
+};
+

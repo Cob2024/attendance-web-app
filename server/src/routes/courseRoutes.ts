@@ -26,6 +26,24 @@ courseRouter.get('/', authenticateToken, async (req: AuthRequest, res) => {
       const student = await prisma.user.findUnique({ where: { id } });
       if (!student) return res.status(404).json({ success: false, error: 'Student not found' });
 
+      // Check for explicit enrollments first
+      const enrollments = await prisma.enrollment.findMany({
+        where: { studentId: id },
+        include: {
+          course: {
+            include: { lecturer: { select: { id: true, name: true, email: true } } },
+          },
+        },
+      });
+
+      if (enrollments.length > 0) {
+        const courses = enrollments
+          .map((e) => e.course)
+          .sort((a, b) => a.courseCode.localeCompare(b.courseCode));
+        return res.json({ success: true, courses });
+      }
+
+      // Fallback: programme + level matching (for backward compatibility)
       const courses = await prisma.course.findMany({
         where: { programme: student.programme!, level: student.level! },
         include: { lecturer: { select: { id: true, name: true, email: true } } },

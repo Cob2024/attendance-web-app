@@ -138,6 +138,22 @@
 
   body {
     @apply bg-background text-foreground;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  /* Smooth transitions for theme switching on common elements */
+  .bg-white,
+  .bg-gray-50,
+  .bg-gray-100,
+  .border-gray-200,
+  .border-gray-300,
+  input,
+  select,
+  textarea,
+  table,
+  th,
+  td {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
   }
 
   /**
@@ -357,6 +373,81 @@ html.dark .text-ttu-navy svg {
 
 html.dark button:hover svg {
   color: #ffffff !important;
+}
+
+/* Dark mode: Modal overlays */
+html.dark [role="dialog"],
+html.dark .modal-content {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #e2e8f0 !important;
+}
+
+/* Dark mode: Stat cards and info cards */
+html.dark .bg-ttu-navy-50 {
+  background-color: rgba(30, 41, 59, 0.6) !important;
+}
+
+html.dark .bg-green-100,
+html.dark .bg-purple-100,
+html.dark .bg-orange-100,
+html.dark .bg-blue-100,
+html.dark .bg-amber-100 {
+  opacity: 0.85;
+}
+
+/* Dark mode: Attendance status badges */
+html.dark .bg-green-100.text-green-800 {
+  background-color: #064e3b !important;
+  color: #6ee7b7 !important;
+}
+
+html.dark .bg-red-100.text-red-800 {
+  background-color: #7f1d1d !important;
+  color: #fca5a5 !important;
+}
+
+/* Dark mode: Chart containers */
+html.dark .recharts-wrapper,
+html.dark .recharts-surface {
+  background-color: transparent !important;
+}
+
+html.dark .recharts-cartesian-grid line {
+  stroke: #334155 !important;
+}
+
+html.dark .recharts-text {
+  fill: #94a3b8 !important;
+}
+
+/* Dark mode: Table hover states */
+html.dark tr.hover\:bg-gray-50:hover {
+  background-color: #1e293b !important;
+}
+
+/* Dark mode: Form inputs */
+html.dark input[type="text"],
+html.dark input[type="email"],
+html.dark input[type="password"],
+html.dark input[type="date"],
+html.dark input[type="number"],
+html.dark select,
+html.dark textarea {
+  background-color: #1e293b !important;
+  border-color: #475569 !important;
+  color: #e2e8f0 !important;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #64748b !important;
+}
+
+/* Dark mode: Enrollment expand panel */
+html.dark .bg-gray-50.border-t.border-gray-100 {
+  background-color: #0f172a !important;
+  border-color: #1e293b !important;
 }
 
 /* ============================================================

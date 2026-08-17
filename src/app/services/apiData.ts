@@ -145,12 +145,13 @@ export const startSessionApi = async (
   courseId: string,
   latitude: number,
   longitude: number,
-  radiusMeters: number = 50
+  radiusMeters: number = 50,
+  durationMinutes: number = 30
 ) => {
   try {
     return await apiFetch('/attendance/session/start', {
       method: 'POST',
-      body: JSON.stringify({ courseId, latitude, longitude, radiusMeters }),
+      body: JSON.stringify({ courseId, latitude, longitude, radiusMeters, durationMinutes }),
     });
   } catch (err: any) {
     return { success: false, error: err.message };
@@ -263,6 +264,71 @@ export const resetDeviceBindingApi = async (studentId: string) => {
     return await apiFetch('/admin/device/reset', {
       method: 'POST',
       body: JSON.stringify({ studentId }),
+    });
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+};
+
+// ------------------------------------------------------------
+// Enrollment API
+// ------------------------------------------------------------
+
+export const enrollStudentApi = async (studentId: string, courseId: string) => {
+  try {
+    return await apiFetch('/enrollments/enroll', {
+      method: 'POST',
+      body: JSON.stringify({ studentId, courseId }),
+    });
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+};
+
+export const enrollStudentsBulkApi = async (studentIds: string[], courseId: string) => {
+  try {
+    return await apiFetch('/enrollments/enroll', {
+      method: 'POST',
+      body: JSON.stringify({ studentIds, courseId }),
+    });
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+};
+
+export const unenrollStudentApi = async (studentId: string, courseId: string) => {
+  try {
+    return await apiFetch('/enrollments/unenroll', {
+      method: 'POST',
+      body: JSON.stringify({ studentId, courseId }),
+    });
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+};
+
+export const getCourseEnrollmentsApi = async (courseId: string) => {
+  try {
+    const data = await apiFetch(`/enrollments/course/${courseId}`);
+    return data.students || [];
+  } catch (err: any) {
+    return [];
+  }
+};
+
+export const getStudentEnrollmentsApi = async (studentId: string) => {
+  try {
+    const data = await apiFetch(`/enrollments/student/${studentId}`);
+    return data.courses || [];
+  } catch (err: any) {
+    return [];
+  }
+};
+
+export const autoEnrollApi = async (courseId: string) => {
+  try {
+    return await apiFetch(`/enrollments/auto-enroll/${courseId}`, {
+      method: 'POST',
     });
   } catch (err: any) {
     return { success: false, error: err.message };
