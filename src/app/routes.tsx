@@ -1,4 +1,5 @@
 import { createBrowserRouter, Navigate } from 'react-router';
+import { LandingPage } from './pages/LandingPage';
 import { Login } from './pages/Login';
 import { StudentDashboard } from './pages/StudentDashboard';
 import { LecturerDashboard } from './pages/LecturerDashboard';
@@ -9,7 +10,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 export const router = createBrowserRouter([
   {
     path: '/',
-    element: <Navigate to="/login" replace />,
+    element: <LandingPage />,
   },
   {
     path: '/login',
