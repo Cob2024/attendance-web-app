@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -10,7 +10,9 @@ import {
     Users,
     GraduationCap,
     ShieldCheck,
-    X
+    X,
+    Sun,
+    Moon
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -22,6 +24,23 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
+
+    // Dark mode state
+    const [isDark, setIsDark] = useState(() => {
+        const stored = localStorage.getItem('theme');
+        if (stored) return stored === 'dark';
+        return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    });
+
+    useEffect(() => {
+        if (isDark) {
+            document.documentElement.classList.add('dark');
+            localStorage.setItem('theme', 'dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+            localStorage.setItem('theme', 'light');
+        }
+    }, [isDark]);
 
     const handleLogout = () => {
         logout();
@@ -92,6 +111,24 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
                 })}
             </nav>
 
+            {/* Dark Mode Toggle */}
+            <div className="px-4 mb-2">
+                <button
+                    onClick={() => setIsDark(!isDark)}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-white/60 hover:bg-white/5 hover:text-white transition-all duration-200"
+                >
+                    {isDark ? (
+                        <Sun className="w-5 h-5" />
+                    ) : (
+                        <Moon className="w-5 h-5" />
+                    )}
+                    <span className="text-sm">{isDark ? 'Light Mode' : 'Dark Mode'}</span>
+                    <div className={`ml-auto w-9 h-5 rounded-full transition-colors duration-200 flex items-center px-0.5 ${isDark ? 'bg-ttu-gold' : 'bg-white/20'}`}>
+                        <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-200 ${isDark ? 'translate-x-4' : 'translate-x-0'}`}></div>
+                    </div>
+                </button>
+            </div>
+
             {/* User Area */}
             <div className="p-4 mt-auto">
                 <div className="bg-white/5 rounded-2xl p-4 mb-4 border border-white/5">
@@ -159,3 +196,4 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
         </>
     );
 };
+

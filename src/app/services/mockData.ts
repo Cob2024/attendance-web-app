@@ -506,11 +506,11 @@ export const getAttendanceStats = (courseId: string) => {
   const attendance = JSON.parse(localStorage.getItem('attendance') || '[]');
   const courseStudents = getCourseStudents(courseId);
 
-  const courseAttendance = attendance.filter((a: any) => a.courseId === courseId);
+  const courseAttendance = attendance.filter((a: any) => a.courseId === courseId && a.status === 'present');
   const enrolledCount = courseStudents.length;
 
   // Get unique dates
-  const dates = [...new Set(courseAttendance.map((a: any) => a.date))];
+  const dates = [...new Set(attendance.filter((a: any) => a.courseId === courseId).map((a: any) => a.date))];
   const totalSessions = dates.length;
 
   return {
@@ -545,10 +545,11 @@ export const getRegisteredDevice = (userId: string) => {
 
 // Validate that the current device matches the registered device
 export const validateDevice = (userId: string, currentFingerprint: string): { valid: boolean; error?: string } => {
-  const binding = getRegisteredDevice(userId);
+  const bindings = JSON.parse(localStorage.getItem('deviceBindings') || '{}');
+  const binding = bindings[userId];
 
-  // No device registered yet — auto-register on first use
-  if (!binding) {
+  // No device registered yet — auto-register current device
+  if (!binding || !binding.fingerprint) {
     registerDevice(userId, currentFingerprint);
     return { valid: true };
   }
@@ -557,7 +558,7 @@ export const validateDevice = (userId: string, currentFingerprint: string): { va
   if (binding.fingerprint !== currentFingerprint) {
     return {
       valid: false,
-      error: 'This account is linked to a different device. Please use your registered device or contact your administrator to reset.',
+      error: 'This student account is currently linked to a different browser/device. Log in as Admin to click "Reset Device", or use the original device.',
     };
   }
 
@@ -819,4 +820,232 @@ export const updateUserProfile = (
 
   const { password: _pw, ...updatedUserWithoutPassword } = users[userIndex];
   return { success: true, user: updatedUserWithoutPassword };
+};
+
+// ============================================================
+// Password Management
+// ============================================================
+
+// Change a user's password
+export const changePassword = (
+  userId: string,
+  currentPassword: string,
+  newPassword: string
+) => {
+  const users = JSON.parse(localStorage.getItem('users') || '[]');
+  const userIndex = users.findIndex((u: any) => u.id === userId);
+
+  if (userIndex === -1) {
+    return { success: false, error: 'User not found' };
+  }
+
+  if (users[userIndex].password !== currentPassword) {
+    return { success: false, error: 'Current password is incorrect' };
+  }
+
+  if (newPassword.length < 6) {
+    return { success: false, error: 'New password must be at least 6 characters' };
+  }
+
+  users[userIndex].password = newPassword;
+  localStorage.setItem('users', JSON.stringify(users));
+
+  return { success: true };
+};
+
+// ============================================================
+// Admin User Management
+// ============================================================
+
+// Delete a user (admin only)
+export const deleteUser = (userId: string) => {
+  const users = JSON.parse(localStorage.getItem('users') || '[]');
+  const attendance = JSON.parse(localStorage.getItem('attendance') || '[]');
+  const bindings = JSON.parse(localStorage.getItem('deviceBindings') || '{}');
+
+  const user = users.find((u: any) => u.id === userId);
+  if (!user) return { success: false, error: 'User not found' };
+  if (user.role === 'admin') return { success: false, error: 'Cannot delete admin accounts' };
+
+  // Remove user
+  const updatedUsers = users.filter((u: any) => u.id !== userId);
+  localStorage.setItem('users', JSON.stringify(updatedUsers));
+
+  // Remove their attendance records
+  const updatedAttendance = attendance.filter((a: any) => a.studentId !== userId);
+  localStorage.setItem('attendance', JSON.stringify(updatedAttendance));
+
+  // Remove device binding
+  delete bindings[userId];
+  localStorage.setItem('deviceBindings', JSON.stringify(bindings));
+
+  // If the user is a lecturer, unassign their courses
+  if (user.role === 'lecturer') {
+    const courses = JSON.parse(localStorage.getItem('courses') || '[]');
+    courses.forEach((c: any) => {
+      if (c.lecturerId === userId) {
+        c.lecturerId = '';
+      }
+    });
+    localStorage.setItem('courses', JSON.stringify(courses));
+  }
+
+  return { success: true };
+};
+
+// Admin update user (can change name, email, student details)
+export const adminUpdateUser = (
+  userId: string,
+  updates: {
+    name?: string;
+    email?: string;
+    studentId?: string;
+    programme?: string;
+    level?: string;
+    password?: string;
+  }
+) => {
+  const users = JSON.parse(localStorage.getItem('users') || '[]');
+  const userIndex = users.findIndex((u: any) => u.id === userId);
+
+  if (userIndex === -1) return { success: false, error: 'User not found' };
+
+  const currentUser = users[userIndex];
+
+  // Email uniqueness check
+  if (updates.email && updates.email !== currentUser.email) {
+    const emailConflict = users.find(
+      (u: any) => u.id !== userId && u.email === updates.email && u.role === currentUser.role
+    );
+    if (emailConflict) return { success: false, error: 'An account with this email already exists' };
+  }
+
+  // Student ID uniqueness check
+  if (updates.studentId && updates.studentId !== currentUser.studentId) {
+    const idConflict = users.find(
+      (u: any) => u.id !== userId && u.studentId === updates.studentId
+    );
+    if (idConflict) return { success: false, error: 'This Student ID is already registered' };
+  }
+
+  if (updates.name) users[userIndex].name = updates.name.trim();
+  if (updates.email) users[userIndex].email = updates.email.trim();
+  if (updates.studentId !== undefined) users[userIndex].studentId = updates.studentId.trim();
+  if (updates.programme !== undefined) users[userIndex].programme = updates.programme.trim();
+  if (updates.level !== undefined) users[userIndex].level = updates.level.trim();
+  if (updates.password) users[userIndex].password = updates.password;
+
+  localStorage.setItem('users', JSON.stringify(users));
+
+  const { password: _pw, ...userWithout } = users[userIndex];
+  return { success: true, user: userWithout };
+};
+
+// ============================================================
+// Lecturer Manual Attendance Functions
+// ============================================================
+
+// Manually mark attendance for a student (lecturer/admin function)
+export const manualMarkAttendance = (
+  studentId: string,
+  courseId: string,
+  date: string,
+  status: 'present' | 'absent'
+) => {
+  const attendance = JSON.parse(localStorage.getItem('attendance') || '[]');
+
+  // Check if record already exists for this student/course/date
+  const existingIndex = attendance.findIndex(
+    (a: any) => a.studentId === studentId && a.courseId === courseId && a.date === date
+  );
+
+  if (existingIndex !== -1) {
+    // Update existing record
+    attendance[existingIndex].status = status;
+    attendance[existingIndex].timestamp = new Date().toISOString();
+    attendance[existingIndex].manual = true;
+  } else {
+    // Create new record
+    attendance.push({
+      id: `a${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+      studentId,
+      courseId,
+      date,
+      status,
+      timestamp: new Date().toISOString(),
+      manual: true,
+    });
+  }
+
+  localStorage.setItem('attendance', JSON.stringify(attendance));
+  return { success: true };
+};
+
+// Remove an attendance record
+export const removeAttendance = (attendanceId: string) => {
+  const attendance = JSON.parse(localStorage.getItem('attendance') || '[]');
+  const updated = attendance.filter((a: any) => a.id !== attendanceId);
+  localStorage.setItem('attendance', JSON.stringify(updated));
+  return { success: true };
+};
+
+// ============================================================
+// Session History
+// ============================================================
+
+// Get all past sessions for a lecturer's course
+export const getSessionHistory = (courseId: string) => {
+  const codes = JSON.parse(localStorage.getItem('attendanceCodes') || '[]');
+  const attendance = JSON.parse(localStorage.getItem('attendance') || '[]');
+  const users = JSON.parse(localStorage.getItem('users') || '[]');
+
+  return codes
+    .filter((c: any) => c.courseId === courseId)
+    .map((session: any) => {
+      const sessionDate = session.createdAt?.split('T')[0] || '';
+      const sessionAttendance = attendance.filter(
+        (a: any) => a.courseId === courseId && a.date === sessionDate
+      );
+      const lecturer = users.find((u: any) => u.id === session.lecturerId);
+      return {
+        ...session,
+        lecturer,
+        attendanceCount: sessionAttendance.length,
+        date: sessionDate,
+      };
+    })
+    .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+};
+
+// ============================================================
+// CSV Export
+// ============================================================
+
+// Generate CSV string for attendance records
+export const exportAttendanceCSV = (courseId: string, startDate?: string, endDate?: string) => {
+  const records = getCourseAttendance(courseId, startDate, endDate);
+  const courses = JSON.parse(localStorage.getItem('courses') || '[]');
+  const course = courses.find((c: any) => c.id === courseId);
+
+  if (!course || records.length === 0) return null;
+
+  const headers = ['Date', 'Student Name', 'Student ID', 'Status', 'Time'];
+  const rows = records.map((r: any) => [
+    r.date,
+    r.student?.name || 'N/A',
+    r.student?.studentId || 'N/A',
+    r.status === 'present' ? 'Present' : 'Absent',
+    new Date(r.timestamp).toLocaleTimeString(),
+  ]);
+
+  const csvContent = [
+    `Course: ${course.courseName} (${course.courseCode})`,
+    `Programme: ${course.programme} | Level: ${course.level}`,
+    `Generated: ${new Date().toLocaleString()}`,
+    '',
+    headers.join(','),
+    ...rows.map((row: string[]) => row.map(cell => `"${cell}"`).join(',')),
+  ].join('\n');
+
+  return csvContent;
 };

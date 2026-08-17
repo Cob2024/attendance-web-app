@@ -9,9 +9,12 @@ import {
   getStudentAttendance,
   getCourseAttendance,
   getActiveSessionsForStudent,
-  getActiveCode
+  getActiveCode,
+  getAttendanceStats
 } from '../services/mockData';
 import { getCurrentPosition } from '../services/geolocation';
+import { markAttendanceApi } from '../services/apiData';
+import { checkServerHealth } from '../services/apiClient';
 import {
   CheckCircle,
   Clock,
@@ -75,7 +78,29 @@ export const StudentDashboard: React.FC = () => {
       // Get the student's GPS position
       const position = await getCurrentPosition();
 
-      // Attempt to mark attendance with GPS + device check
+      // Attempt live backend API call first
+      const isOnline = await checkServerHealth();
+      if (isOnline) {
+        const apiResult = await markAttendanceApi(
+          courseId,
+          position.latitude,
+          position.longitude
+        );
+
+        if (apiResult.success) {
+          toast.success('Attendance marked successfully!');
+          const history = getStudentAttendance(user.id);
+          setAttendanceHistory(history);
+          setLoading(null);
+          return;
+        } else {
+          toast.error(apiResult.error || 'Failed to mark attendance');
+          setLoading(null);
+          return;
+        }
+      }
+
+      // Local fallback
       const result = markAttendance(
         user.id,
         courseId,
@@ -126,9 +151,9 @@ export const StudentDashboard: React.FC = () => {
   const renderAttendanceAction = (course: any) => {
     if (isTodayMarked(course.id)) {
       return (
-        <div className="flex items-center gap-2 px-4 py-2.5 bg-green-50 text-green-700 rounded-lg">
-          <CheckCircle className="w-5 h-5" />
-          <span className="text-sm font-medium">Marked for today</span>
+        <div className="flex items-center gap-2 px-4 py-2.5 bg-emerald-50 text-emerald-800 dark:bg-emerald-950/90 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800 rounded-xl">
+          <CheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+          <span className="text-sm font-semibold">Marked for today</span>
         </div>
       );
     }
@@ -230,7 +255,7 @@ export const StudentDashboard: React.FC = () => {
                       <button
                         onClick={() => handleMarkAttendance(session.courseId)}
                         disabled={loading === session.courseId}
-                        className="px-3 py-1.5 bg-white text-ttu-navy rounded-lg text-xs font-semibold hover:bg-white/90 transition-colors disabled:opacity-70 flex items-center gap-1.5"
+                        className="px-3 py-1.5 bg-white text-ttu-navy rounded-lg text-xs font-semibold hover:bg-white/90 transition-colors disabled:opacity-70 flex items-center gap-1.5 cursor-pointer"
                       >
                         {loading === session.courseId ? (
                           <Loader2 className="w-3 h-3 animate-spin" />
@@ -253,8 +278,35 @@ export const StudentDashboard: React.FC = () => {
           {isCoursesView ? (
             /* ===== MY COURSES VIEW ===== */
             <div className="mb-6 lg:mb-8">
+              {/* Stats Summary */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-6">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                  <p className="text-xs text-gray-500 mb-1">Total Courses</p>
+                  <p className="text-2xl font-bold text-gray-900">{courses.length}</p>
+                </div>
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                  <p className="text-xs text-gray-500 mb-1">Active Sessions</p>
+                  <p className="text-2xl font-bold text-emerald-600">{activeSessions.length}</p>
+                </div>
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                  <p className="text-xs text-gray-500 mb-1">Total Attended</p>
+                  <p className="text-2xl font-bold text-gray-900">{attendanceHistory.filter(a => a.status === 'present').length}</p>
+                </div>
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                  <p className="text-xs text-gray-500 mb-1">Overall Attendance</p>
+                  <p className="text-2xl font-bold text-ttu-navy">
+                    {courses.length > 0
+                      ? Math.round(courses.reduce((sum, c) => sum + getAttendancePercentage(c.id), 0) / courses.length)
+                      : 0}%
+                  </p>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
-                {courses.length > 0 ? courses.map((course) => (
+                {courses.length > 0 ? courses.map((course) => {
+                  const stats = getAttendanceStats(course.id);
+                  const myAttendances = attendanceHistory.filter(a => a.courseId === course.id && a.status === 'present').length;
+                  return (
                   <div key={course.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
                     <div className="p-4 lg:p-6">
                       <div className="flex items-start justify-between mb-4">
@@ -267,6 +319,24 @@ export const StudentDashboard: React.FC = () => {
                         </div>
                       </div>
 
+                      {/* Detailed Stats */}
+                      <div className="grid grid-cols-3 gap-2 mb-4 text-center">
+                        <div className="bg-gray-50 rounded-lg p-2">
+                          <p className="text-sm font-bold text-gray-900">{myAttendances}</p>
+                          <p className="text-[10px] text-gray-500 uppercase">Attended</p>
+                        </div>
+                        <div className="bg-gray-50 rounded-lg p-2">
+                          <p className="text-sm font-bold text-gray-900">{stats.totalSessions}</p>
+                          <p className="text-[10px] text-gray-500 uppercase">Sessions</p>
+                        </div>
+                        <div className="bg-gray-50 rounded-lg p-2">
+                          <p className={`text-sm font-bold ${getAttendancePercentage(course.id) >= 75 ? 'text-green-600' : getAttendancePercentage(course.id) >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
+                            {getAttendancePercentage(course.id)}%
+                          </p>
+                          <p className="text-[10px] text-gray-500 uppercase">Rate</p>
+                        </div>
+                      </div>
+
                       <div className="mb-4">
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-sm text-gray-600">Attendance</span>
@@ -276,7 +346,7 @@ export const StudentDashboard: React.FC = () => {
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-2">
                           <div
-                            className="bg-ttu-navy h-2 rounded-full transition-all"
+                            className={`h-2 rounded-full transition-all ${getAttendancePercentage(course.id) >= 75 ? 'bg-green-500' : getAttendancePercentage(course.id) >= 50 ? 'bg-amber-500' : 'bg-red-500'}`}
                             style={{ width: `${getAttendancePercentage(course.id)}%` }}
                           ></div>
                         </div>
@@ -285,7 +355,8 @@ export const StudentDashboard: React.FC = () => {
                       {renderAttendanceAction(course)}
                     </div>
                   </div>
-                )) : (
+                  );
+                }) : (
                   <div className="col-span-full bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
                     <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">No Courses Yet</h3>
@@ -474,6 +545,8 @@ export const StudentDashboard: React.FC = () => {
             isOpen={showEditProfile}
             onClose={() => setShowEditProfile(false)}
           />
+
+          {/* OTP Passcode Verification Modal */}
         </div>
       </div>
     </div>

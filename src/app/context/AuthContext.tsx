@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { registerUser, updateUserProfile, validateDevice, registerDevice } from '../services/mockData';
 import { generateDeviceFingerprint } from '../services/deviceFingerprint';
+import { loginUserApi, registerUserApi } from '../services/apiData';
+import { checkServerHealth } from '../services/apiClient';
 
 export type UserRole = 'student' | 'lecturer' | 'admin';
 
@@ -53,19 +55,29 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const login = async (email: string, password: string, role: UserRole): Promise<{ success: boolean; error?: string }> => {
     try {
-      // Get users from localStorage
+      const fp = generateDeviceFingerprint();
+
+      // Attempt live backend API login first
+      const isOnline = await checkServerHealth();
+      if (isOnline) {
+        const apiResult = await loginUserApi(email, password, role, fp);
+        if (apiResult.success && apiResult.user) {
+          setUser(apiResult.user);
+          setDeviceFingerprint(fp);
+          localStorage.setItem('currentUser', JSON.stringify(apiResult.user));
+          return { success: true };
+        } else if (apiResult.error) {
+          return { success: false, error: apiResult.error };
+        }
+      }
+
+      // Local mock login fallback
       const usersData = localStorage.getItem('users');
       const users = usersData ? JSON.parse(usersData) : [];
-
-      // Find user by email, password, and role
       const foundUser = users.find((u: any) => u.email === email && u.password === password && u.role === role);
 
       if (foundUser) {
-        // Generate device fingerprint
-        const fp = generateDeviceFingerprint();
-
-        // For students and lecturers, validate/register device
-        if (role === 'student' || role === 'lecturer') {
+        if (role === 'student') {
           const deviceCheck = validateDevice(foundUser.id, fp);
           if (!deviceCheck.valid) {
             return { success: false, error: deviceCheck.error || 'Device verification failed' };
@@ -95,9 +107,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     level?: string
   ): Promise<{ success: boolean; error?: string }> => {
     try {
+      const isOnline = await checkServerHealth();
+      if (isOnline) {
+        const apiResult = await registerUserApi(name, email, password, role, studentId, programme, level);
+        if (apiResult.success && apiResult.user) {
+          const fp = generateDeviceFingerprint();
+          setUser(apiResult.user);
+          setDeviceFingerprint(fp);
+          localStorage.setItem('currentUser', JSON.stringify(apiResult.user));
+          return { success: true };
+        } else if (apiResult.error) {
+          return { success: false, error: apiResult.error };
+        }
+      }
+
       const result = registerUser(name, email, password, role, studentId, programme, level);
       if (result.success && result.user) {
-        // Generate and register device fingerprint for new user
         const fp = generateDeviceFingerprint();
         registerDevice(result.user.id, fp);
 

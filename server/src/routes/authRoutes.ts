@@ -1,0 +1,167 @@
+import { Router } from 'express';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import { prisma } from '../db.js';
+import { authenticateToken, AuthRequest } from '../middleware/auth.js';
+
+export const authRouter = Router();
+
+const JWT_SECRET = process.env.JWT_SECRET || 'smartattend_secret';
+
+// Register User
+authRouter.post('/register', async (req, res) => {
+  try {
+    const { name, email, password, role, studentId, programme, level } = req.body;
+
+    if (!name || !email || !password || !role) {
+      return res.status(400).json({ success: false, error: 'Name, email, password, and role are required' });
+    }
+
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
+      return res.status(400).json({ success: false, error: 'An account with this email already exists' });
+    }
+
+    if (role === 'student') {
+      if (!studentId || !programme || !level) {
+        return res.status(400).json({ success: false, error: 'Student ID, Programme, and Level are required for students' });
+      }
+      const existingStudentId = await prisma.user.findUnique({ where: { studentId } });
+      if (existingStudentId) {
+        return res.status(400).json({ success: false, error: 'This Student ID is already registered' });
+      }
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    const user = await prisma.user.create({
+      data: {
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        passwordHash,
+        role,
+        studentId: role === 'student' ? studentId?.trim() : null,
+        programme: role === 'student' ? programme?.trim() : null,
+        level: role === 'student' ? level?.trim() : null,
+      },
+    });
+
+    const { passwordHash: _, ...userWithoutPassword } = user;
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role, name: user.name },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    return res.json({ success: true, user: userWithoutPassword, token });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message || 'Registration failed' });
+  }
+});
+
+// Login User
+authRouter.post('/login', async (req, res) => {
+  try {
+    const { email, password, role, deviceFingerprint } = req.body;
+
+    if (!email || !password || !role) {
+      return res.status(400).json({ success: false, error: 'Email, password, and role are required' });
+    }
+
+    const user = await prisma.user.findFirst({
+      where: { email: email.trim().toLowerCase(), role },
+    });
+
+    if (!user) {
+      return res.status(400).json({ success: false, error: 'Invalid email or password for this role' });
+    }
+
+    const passwordValid = await bcrypt.compare(password, user.passwordHash);
+    if (!passwordValid) {
+      return res.status(400).json({ success: false, error: 'Invalid email or password' });
+    }
+
+    // Hardware device binding check for students
+    if (role === 'student' && deviceFingerprint) {
+      const binding = await prisma.deviceBinding.findUnique({
+        where: { studentId: user.id },
+      });
+
+      if (binding) {
+        if (binding.fingerprint !== deviceFingerprint) {
+          return res.status(403).json({
+            success: false,
+            error: 'DEVICE_LOCKED',
+            message: 'You are signed in on a different device. Reset your device binding through admin to use this device.',
+          });
+        }
+      } else {
+        // Register device binding
+        await prisma.deviceBinding.create({
+          data: {
+            studentId: user.id,
+            fingerprint: deviceFingerprint,
+            userAgent: req.headers['user-agent'] || '',
+          },
+        });
+      }
+    }
+
+    const { passwordHash: _, ...userWithoutPassword } = user;
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role, name: user.name },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    return res.json({ success: true, user: userWithoutPassword, token });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message || 'Login failed' });
+  }
+});
+
+// Get Current User Profile
+authRouter.get('/me', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user?.id },
+    });
+    if (!user) return res.status(404).json({ success: false, error: 'User not found' });
+
+    const { passwordHash: _, ...userWithoutPassword } = user;
+    return res.json({ success: true, user: userWithoutPassword });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Change Password
+authRouter.post('/change-password', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ success: false, error: 'Current and new password required' });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ success: false, error: 'New password must be at least 6 characters' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: req.user?.id } });
+    if (!user) return res.status(404).json({ success: false, error: 'User not found' });
+
+    const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!valid) {
+      return res.status(400).json({ success: false, error: 'Current password is incorrect' });
+    }
+
+    const newHash = await bcrypt.hash(newPassword, 10);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash: newHash },
+    });
+
+    return res.json({ success: true });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});

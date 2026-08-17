@@ -20,3 +20,10 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+
+# Server & Database
+server/node_modules/
+server/prisma/*.db
+server/prisma/*.db-journal
+server/dump.js
+

@@ -9,7 +9,10 @@ import {
   getAttendanceStats,
   startAttendanceSession,
   getActiveCode,
-  deactivateCode
+  deactivateCode,
+  manualMarkAttendance,
+  exportAttendanceCSV,
+  getSessionHistory
 } from '../services/mockData';
 import { getCurrentPosition } from '../services/geolocation';
 import { EditProfileModal } from '../components/EditProfileModal';
@@ -31,7 +34,11 @@ import {
   Mail,
   Eye,
   Play,
-  Radio
+  Radio,
+  FileSpreadsheet,
+  History,
+  ToggleLeft,
+  ToggleRight
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '../components/ui/chart';
@@ -58,6 +65,8 @@ export const LecturerDashboard: React.FC = () => {
   const [summaryDate, setSummaryDate] = useState(new Date().toISOString().split('T')[0]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
+  const [showSessionHistory, setShowSessionHistory] = useState(false);
+  const [sessionHistory, setSessionHistory] = useState<any[]>([]);
 
   useEffect(() => {
     if (user) {
@@ -190,6 +199,42 @@ export const LecturerDashboard: React.FC = () => {
     // Save PDF
     doc.save(`${selectedCourse.courseCode}_attendance_${new Date().toISOString().split('T')[0]}.pdf`);
     toast.success('PDF downloaded successfully!');
+  };
+
+  const downloadCSV = () => {
+    if (!selectedCourse) return;
+    const csv = exportAttendanceCSV(selectedCourse.id, startDate, endDate);
+    if (!csv) {
+      toast.error('No records to export');
+      return;
+    }
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${selectedCourse.courseCode}_attendance_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success('CSV exported successfully!');
+  };
+
+  const handleManualMark = (studentId: string, courseId: string, date: string, newStatus: 'present' | 'absent') => {
+    manualMarkAttendance(studentId, courseId, date, newStatus);
+    // Refresh records
+    const records = getCourseAttendance(selectedCourse.id, startDate, endDate);
+    setAttendanceRecords(records);
+    const courseStats = getAttendanceStats(selectedCourse.id);
+    setStats(courseStats);
+    toast.success(`Marked as ${newStatus}`);
+  };
+
+  const handleViewSessionHistory = () => {
+    if (!selectedCourse) return;
+    const history = getSessionHistory(selectedCourse.id);
+    setSessionHistory(history);
+    setShowSessionHistory(!showSessionHistory);
   };
 
   const getChartData = () => {
@@ -535,47 +580,49 @@ export const LecturerDashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Active Attendance Code Display */}
+          {/* Active Attendance Session Banner */}
           {activeCode && (
-            <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl shadow-lg p-4 lg:p-6 mb-6 lg:mb-8 text-white">
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
-                <div className="flex-1">
+            <div className="bg-gradient-to-r from-emerald-600 via-teal-700 to-ttu-navy rounded-2xl shadow-xl p-5 lg:p-7 mb-6 lg:mb-8 text-white relative overflow-hidden">
+              <div className="flex flex-col lg:flex-row items-center justify-between gap-6 relative z-10">
+                <div className="flex-1 w-full">
                   <div className="flex items-center gap-2 mb-2">
-                    <Radio className="w-5 h-5 animate-pulse" />
-                    <p className="text-emerald-100 text-sm font-medium">Live Attendance Session</p>
+                    <Radio className="w-5 h-5 text-emerald-300 animate-pulse" />
+                    <p className="text-emerald-100 text-sm font-semibold tracking-wide uppercase">Live GPS Session Active</p>
                   </div>
-                  <p className="text-white font-semibold text-lg mb-1">
+                  <p className="text-white font-bold text-xl mb-1">
                     {selectedCourse?.courseName} ({selectedCourse?.courseCode})
                   </p>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-4">
-                    <div className="bg-white/15 rounded-lg p-3">
-                      <p className="text-emerald-200 text-xs mb-1">Students Marked</p>
-                      <p className="text-2xl font-bold">{sessionStudentCount}</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
+                    <div className="bg-white/15 backdrop-blur-sm rounded-xl p-3">
+                      <p className="text-emerald-200 text-xs mb-1">Students Marked Present</p>
+                      <p className="text-2xl sm:text-3xl font-extrabold text-white">{sessionStudentCount}</p>
                     </div>
-                    <div className="bg-white/15 rounded-lg p-3">
-                      <p className="text-emerald-200 text-xs mb-1">Enrolled</p>
-                      <p className="text-2xl font-bold">{courseStudents.length}</p>
+
+                    <div className="bg-white/15 backdrop-blur-sm rounded-xl p-3">
+                      <p className="text-emerald-200 text-xs mb-1">Total Enrolled</p>
+                      <p className="text-2xl sm:text-3xl font-extrabold text-white">{courseStudents.length}</p>
                     </div>
-                    <div className="bg-white/15 rounded-lg p-3">
+
+                    <div className="bg-white/15 backdrop-blur-sm rounded-xl p-3">
                       <div className="flex items-center gap-1 mb-1">
-                        <MapPin className="w-3 h-3 text-emerald-200" />
-                        <p className="text-emerald-200 text-xs">Location</p>
+                        <MapPin className="w-3.5 h-3.5 text-emerald-200" />
+                        <p className="text-emerald-200 text-xs">GPS Geofence</p>
                       </div>
-                      <p className="text-sm font-medium">Captured ✓</p>
-                      <p className="text-xs text-emerald-200 mt-0.5">50m radius</p>
+                      <p className="text-sm font-semibold text-white">Active ✓</p>
+                      <p className="text-xs text-emerald-200">50m radius bound</p>
                     </div>
                   </div>
 
                   <p className="text-xs text-emerald-200 mt-3">
-                    Started at {new Date(activeCode.createdAt).toLocaleTimeString()}
+                    Instant 1-Tap Attendance enabled • Started at {new Date(activeCode.createdAt).toLocaleTimeString()}
                   </p>
                 </div>
 
-                <div className="flex sm:flex-col gap-2">
+                <div className="flex flex-row lg:flex-col gap-3 w-full lg:w-auto">
                   <button
                     onClick={handleEndSession}
-                    className="flex-1 sm:flex-initial px-4 py-2 bg-red-500/80 hover:bg-red-500 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                    className="flex-1 lg:flex-initial px-5 py-3 bg-red-500/90 hover:bg-red-600 text-white rounded-xl font-bold shadow-md transition-all flex items-center justify-center gap-2 text-sm cursor-pointer"
                   >
                     <XCircle className="w-4 h-4" />
                     End Session
@@ -684,14 +731,24 @@ export const LecturerDashboard: React.FC = () => {
                 </div>
               </div>
 
-              <button
-                onClick={downloadPDF}
-                disabled={!selectedCourse || filteredRecords.length === 0}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                <Download className="w-5 h-5" />
-                Download PDF
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={downloadPDF}
+                  disabled={!selectedCourse || filteredRecords.length === 0}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  <Download className="w-5 h-5" />
+                  PDF
+                </button>
+                <button
+                  onClick={downloadCSV}
+                  disabled={!selectedCourse || filteredRecords.length === 0}
+                  className="px-4 py-2 bg-teal-600 text-white rounded-lg font-medium hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  <FileSpreadsheet className="w-5 h-5" />
+                  CSV
+                </button>
+              </div>
             </div>
           </div>
 
@@ -739,9 +796,15 @@ export const LecturerDashboard: React.FC = () => {
                           {record.student?.studentId || 'N/A'}
                         </td>
                         <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
-                          <span className="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            Present
-                          </span>
+                          {record.status === 'present' ? (
+                            <span className="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              Present
+                            </span>
+                          ) : (
+                            <span className="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                              Absent
+                            </span>
+                          )}
                         </td>
                         <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-500 hidden md:table-cell">
                           {new Date(record.timestamp).toLocaleTimeString()}
@@ -807,7 +870,7 @@ export const LecturerDashboard: React.FC = () => {
                     const record = attendanceRecords.find(
                       r => r.studentId === student.id && r.date === summaryDate
                     );
-                    const isPresent = !!record;
+                    const isPresent = record?.status === 'present';
 
                     return (
                       <tr key={index} className="hover:bg-gray-50">
@@ -818,20 +881,35 @@ export const LecturerDashboard: React.FC = () => {
                           {student.studentId}
                         </td>
                         <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
-                          {isPresent ? (
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
-                              <UserCheck className="w-3.5 h-3.5" />
-                              Present
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">
-                              <UserX className="w-3.5 h-3.5" />
-                              Absent
-                            </span>
-                          )}
+                          <button
+                            onClick={() => handleManualMark(
+                              student.id,
+                              selectedCourse.id,
+                              summaryDate,
+                              isPresent ? 'absent' : 'present'
+                            )}
+                            className="group cursor-pointer"
+                            title={`Click to mark ${isPresent ? 'absent' : 'present'}`}
+                          >
+                            {isPresent ? (
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 group-hover:bg-red-100 group-hover:text-red-700 transition-colors">
+                                <UserCheck className="w-3.5 h-3.5 group-hover:hidden" />
+                                <UserX className="w-3.5 h-3.5 hidden group-hover:block" />
+                                <span className="group-hover:hidden">Present</span>
+                                <span className="hidden group-hover:inline">Mark Absent</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700 group-hover:bg-green-100 group-hover:text-green-700 transition-colors">
+                                <UserX className="w-3.5 h-3.5 group-hover:hidden" />
+                                <UserCheck className="w-3.5 h-3.5 hidden group-hover:block" />
+                                <span className="group-hover:hidden">Absent</span>
+                                <span className="hidden group-hover:inline">Mark Present</span>
+                              </span>
+                            )}
+                          </button>
                         </td>
                         <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-500 hidden sm:table-cell">
-                          {isPresent ? new Date(record.timestamp).toLocaleTimeString() : '-'}
+                          {isPresent && record ? new Date(record.timestamp).toLocaleTimeString() : '-'}
                         </td>
                       </tr>
                     );
@@ -852,17 +930,60 @@ export const LecturerDashboard: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-green-500"></div>
                   <span className="text-gray-600">
-                    Present: {courseStudents.filter(s => attendanceRecords.some(r => r.studentId === s.id && r.date === summaryDate)).length}
+                    Present: {courseStudents.filter(s => attendanceRecords.some(r => r.studentId === s.id && r.date === summaryDate && r.status === 'present')).length}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-red-500"></div>
                   <span className="text-gray-600">
-                    Absent: {courseStudents.filter(s => !attendanceRecords.some(r => r.studentId === s.id && r.date === summaryDate)).length}
+                    Absent: {courseStudents.filter(s => !attendanceRecords.some(r => r.studentId === s.id && r.date === summaryDate && r.status === 'present')).length}
                   </span>
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Session History */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mt-6 lg:mt-8">
+            <button
+              onClick={handleViewSessionHistory}
+              className="w-full px-4 lg:px-6 py-4 border-b border-gray-200 flex items-center justify-between hover:bg-gray-50 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <History className="w-5 h-5 text-gray-600" />
+                <h2 className="text-lg font-semibold text-gray-900">Session History</h2>
+              </div>
+              <span className="text-sm text-gray-400">{showSessionHistory ? 'Hide' : 'Show'}</span>
+            </button>
+            {showSessionHistory && (
+              <div className="divide-y divide-gray-200">
+                {sessionHistory.length > 0 ? sessionHistory.map((session: any, idx: number) => (
+                  <div key={idx} className="px-4 lg:px-6 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-gray-50">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${session.active ? 'bg-green-500 animate-pulse' : 'bg-gray-300'}`}></div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">
+                          {new Date(session.createdAt).toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Started at {new Date(session.createdAt).toLocaleTimeString()} {session.active && '• Active now'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4 ml-5 sm:ml-0">
+                      <span className="text-sm font-semibold text-gray-700">{session.attendanceCount} students</span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${session.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                        {session.active ? 'Live' : 'Ended'}
+                      </span>
+                    </div>
+                  </div>
+                )) : (
+                  <div className="p-6 text-center text-gray-500 text-sm">
+                    No sessions recorded yet. Start an attendance session to see history here.
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Enrolled Students */}

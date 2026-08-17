@@ -12,6 +12,9 @@ import {
   deleteCourse,
   getRegisteredDevice,
   resetDeviceBinding,
+  deleteUser,
+  adminUpdateUser,
+  registerUser,
   PROGRAMMES,
   LEVELS,
   CURRENT_SEMESTER
@@ -33,7 +36,9 @@ import {
   Smartphone,
   RotateCcw,
   CheckCircle,
-  AlertTriangle
+  AlertTriangle,
+  UserPlus,
+  Mail
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -46,6 +51,7 @@ export const AdminDashboard: React.FC = () => {
   const [courses, setCourses] = useState<any[]>([]);
   const [lecturers, setLecturers] = useState<any[]>([]);
   const [students, setStudents] = useState<any[]>([]);
+  const [deviceBindings, setDeviceBindings] = useState<any>({});
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -63,10 +69,25 @@ export const AdminDashboard: React.FC = () => {
   const [editLecturerId, setEditLecturerId] = useState('');
 
   const refreshData = () => {
-    setCourses(getAllCourses());
-    setLecturers(getAllLecturers());
-    setStudents(getAllStudents());
+    setCourses([...getAllCourses()]);
+    setLecturers([...getAllLecturers()]);
+    setStudents([...getAllStudents()]);
+    setDeviceBindings(JSON.parse(localStorage.getItem('deviceBindings') || '{}'));
   };
+
+  // Edit user state
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [editUserName, setEditUserName] = useState('');
+  const [editUserEmail, setEditUserEmail] = useState('');
+  const [editUserStudentId, setEditUserStudentId] = useState('');
+  const [editUserProgramme, setEditUserProgramme] = useState('');
+  const [editUserLevel, setEditUserLevel] = useState('');
+
+  // Add lecturer state
+  const [showAddLecturer, setShowAddLecturer] = useState(false);
+  const [newLecturerName, setNewLecturerName] = useState('');
+  const [newLecturerEmail, setNewLecturerEmail] = useState('');
+  const [newLecturerPassword, setNewLecturerPassword] = useState('lecturer123');
 
   useEffect(() => {
     refreshData();
@@ -136,6 +157,71 @@ export const AdminDashboard: React.FC = () => {
       } else {
         toast.error('Failed to reset device binding');
       }
+    }
+  };
+
+  const handleDeleteUser = (userId: string, userName: string, role: string) => {
+    if (window.confirm(`Delete ${role} "${userName}"? This action cannot be undone and will remove all their associated data.`)) {
+      const result = deleteUser(userId);
+      if (result.success) {
+        toast.success(`${role === 'student' ? 'Student' : 'Lecturer'} "${userName}" deleted successfully`);
+        refreshData();
+      } else {
+        toast.error(result.error || 'Failed to delete user');
+      }
+    }
+  };
+
+  const startEditUser = (user: any) => {
+    setEditingUserId(user.id);
+    setEditUserName(user.name || '');
+    setEditUserEmail(user.email || '');
+    setEditUserStudentId(user.studentId || '');
+    setEditUserProgramme(user.programme || '');
+    setEditUserLevel(user.level || '');
+  };
+
+  const handleSaveUser = (userId: string) => {
+    const updates: any = {
+      name: editUserName,
+      email: editUserEmail,
+    };
+    const user = [...students, ...lecturers].find((u: any) => u.id === userId);
+    if (user?.role === 'student') {
+      updates.studentId = editUserStudentId;
+      updates.programme = editUserProgramme;
+      updates.level = editUserLevel;
+    }
+    const result = adminUpdateUser(userId, updates);
+    if (result.success) {
+      toast.success('User updated successfully');
+      setEditingUserId(null);
+      refreshData();
+    } else {
+      toast.error(result.error || 'Failed to update user');
+    }
+  };
+
+  const handleAddLecturer = () => {
+    if (!newLecturerName.trim() || !newLecturerEmail.trim()) {
+      toast.error('Please enter name and email');
+      return;
+    }
+    const result = registerUser(
+      newLecturerName.trim(),
+      newLecturerEmail.trim(),
+      newLecturerPassword,
+      'lecturer'
+    );
+    if (result.success) {
+      toast.success(`Lecturer "${newLecturerName}" added with password: ${newLecturerPassword}`);
+      setShowAddLecturer(false);
+      setNewLecturerName('');
+      setNewLecturerEmail('');
+      setNewLecturerPassword('lecturer123');
+      refreshData();
+    } else {
+      toast.error(result.error || 'Failed to add lecturer');
     }
   };
 
@@ -442,23 +528,33 @@ export const AdminDashboard: React.FC = () => {
           {/* ===== LECTURERS VIEW ===== */}
           {isLecturersView && (
             <>
-              <div className="flex items-center gap-3 mb-6 lg:mb-8">
-                <button
-                  onClick={() => setSidebarOpen(true)}
-                  className="lg:hidden p-2 rounded-lg hover:bg-gray-200 transition-colors"
-                  aria-label="Open menu"
-                >
-                  <Menu className="w-6 h-6 text-gray-700" />
-                </button>
-                <div>
-                  <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Lecturers</h1>
-                  <p className="text-gray-600">All registered lecturers and their assigned courses</p>
+              <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 mb-6 lg:mb-8">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setSidebarOpen(true)}
+                    className="lg:hidden p-2 rounded-lg hover:bg-gray-200 transition-colors"
+                    aria-label="Open menu"
+                  >
+                    <Menu className="w-6 h-6 text-gray-700" />
+                  </button>
+                  <div>
+                    <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Lecturers</h1>
+                    <p className="text-gray-600">All registered lecturers and their assigned courses</p>
+                  </div>
                 </div>
+                <button
+                  onClick={() => setShowAddLecturer(true)}
+                  className="px-4 py-2 bg-ttu-navy text-white rounded-lg font-medium hover:bg-ttu-navy-dark transition-colors flex items-center justify-center gap-2 ml-11 lg:ml-0 self-start"
+                >
+                  <UserPlus className="w-5 h-5" />
+                  Add Lecturer
+                </button>
               </div>
 
               <div className="space-y-4">
                 {lecturers.map((lecturer: any) => {
                   const lecturerCourses = courses.filter((c: any) => c.lecturerId === lecturer.id);
+                  const isEditing = editingUserId === lecturer.id;
                   return (
                     <div key={lecturer.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                       <div className="px-4 lg:px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -466,15 +562,69 @@ export const AdminDashboard: React.FC = () => {
                           <div className="w-12 h-12 bg-ttu-navy-50 rounded-full flex items-center justify-center">
                             <GraduationCap className="w-6 h-6 text-ttu-navy" />
                           </div>
-                          <div>
-                            <h3 className="font-semibold text-gray-900">{lecturer.name}</h3>
-                            <p className="text-sm text-gray-500">{lecturer.email}</p>
-                          </div>
+                          {isEditing ? (
+                            <div className="space-y-2">
+                              <input
+                                type="text"
+                                value={editUserName}
+                                onChange={(e) => setEditUserName(e.target.value)}
+                                className="px-2 py-1 border border-gray-300 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-ttu-navy focus:border-transparent"
+                                placeholder="Name"
+                              />
+                              <input
+                                type="email"
+                                value={editUserEmail}
+                                onChange={(e) => setEditUserEmail(e.target.value)}
+                                className="px-2 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-ttu-navy focus:border-transparent"
+                                placeholder="Email"
+                              />
+                            </div>
+                          ) : (
+                            <div>
+                              <h3 className="font-semibold text-gray-900">{lecturer.name}</h3>
+                              <p className="text-sm text-gray-500">{lecturer.email}</p>
+                            </div>
+                          )}
                         </div>
                         <div className="flex items-center gap-2 ml-16 sm:ml-0">
                           <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
                             {lecturerCourses.length} course{lecturerCourses.length !== 1 ? 's' : ''}
                           </span>
+                          {isEditing ? (
+                            <>
+                              <button
+                                onClick={() => handleSaveUser(lecturer.id)}
+                                className="p-1.5 text-green-600 hover:bg-green-100 rounded-lg transition-colors"
+                                title="Save"
+                              >
+                                <Save className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => setEditingUserId(null)}
+                                className="p-1.5 text-gray-400 hover:bg-gray-100 rounded-lg transition-colors"
+                                title="Cancel"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => startEditUser(lecturer)}
+                                className="p-1.5 text-gray-400 hover:text-ttu-navy hover:bg-ttu-navy-50 rounded-lg transition-colors"
+                                title="Edit lecturer"
+                              >
+                                <Edit3 className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteUser(lecturer.id, lecturer.name, 'lecturer')}
+                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Delete lecturer"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </div>
                       {lecturerCourses.length > 0 && (
@@ -496,7 +646,70 @@ export const AdminDashboard: React.FC = () => {
                     </div>
                   );
                 })}
+                {lecturers.length === 0 && (
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+                    <GraduationCap className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-500">No lecturers registered yet</p>
+                  </div>
+                )}
               </div>
+
+              {/* Add Lecturer Modal */}
+              {showAddLecturer && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                  <div className="bg-white rounded-xl p-6 max-w-md w-full">
+                    <h3 className="text-xl font-semibold text-gray-900 mb-1">Add New Lecturer</h3>
+                    <p className="text-sm text-gray-500 mb-6">Create a new lecturer account</p>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
+                        <input
+                          type="text"
+                          value={newLecturerName}
+                          onChange={(e) => setNewLecturerName(e.target.value)}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ttu-navy focus:border-transparent"
+                          placeholder="e.g., Dr. John Smith"
+                          autoFocus
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                        <input
+                          type="email"
+                          value={newLecturerEmail}
+                          onChange={(e) => setNewLecturerEmail(e.target.value)}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ttu-navy focus:border-transparent"
+                          placeholder="e.g., john.smith@ttu.edu.gh"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Initial Password</label>
+                        <input
+                          type="text"
+                          value={newLecturerPassword}
+                          onChange={(e) => setNewLecturerPassword(e.target.value)}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ttu-navy focus:border-transparent"
+                        />
+                        <p className="text-xs text-gray-400 mt-1">The lecturer can change this after first login</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-3 mt-6">
+                      <button
+                        onClick={() => { setShowAddLecturer(false); setNewLecturerName(''); setNewLecturerEmail(''); }}
+                        className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleAddLecturer}
+                        className="flex-1 px-4 py-2 bg-ttu-navy text-white rounded-lg font-medium hover:bg-ttu-navy-dark transition-colors"
+                      >
+                        Add Lecturer
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </>
           )}
 
@@ -557,27 +770,76 @@ export const AdminDashboard: React.FC = () => {
                         <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Programme & Level</th>
                         <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Email</th>
                         <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Device Lock Status</th>
-                        <th className="px-4 lg:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                        <th className="px-4 lg:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
                       {filteredStudents.map((student: any) => {
-                        const deviceBinding = getRegisteredDevice(student.id);
+                        const deviceBinding = deviceBindings[student.id] || getRegisteredDevice(student.id);
+                        const isEditing = editingUserId === student.id;
 
                         return (
                           <tr key={student.id} className="hover:bg-gray-50">
                             <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
-                              <p className="font-semibold text-gray-900 text-sm">{student.name}</p>
+                              {isEditing ? (
+                                <input
+                                  type="text"
+                                  value={editUserName}
+                                  onChange={(e) => setEditUserName(e.target.value)}
+                                  className="px-2 py-1 border border-gray-300 rounded text-sm font-semibold w-full max-w-[180px] focus:ring-2 focus:ring-ttu-navy focus:border-transparent"
+                                />
+                              ) : (
+                                <p className="font-semibold text-gray-900 text-sm">{student.name}</p>
+                              )}
                             </td>
                             <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-700">
-                              {student.studentId}
+                              {isEditing ? (
+                                <input
+                                  type="text"
+                                  value={editUserStudentId}
+                                  onChange={(e) => setEditUserStudentId(e.target.value)}
+                                  className="px-2 py-1 border border-gray-300 rounded text-sm font-mono w-full max-w-[140px] focus:ring-2 focus:ring-ttu-navy focus:border-transparent"
+                                />
+                              ) : (
+                                student.studentId
+                              )}
                             </td>
                             <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-600 hidden sm:table-cell">
-                              <p className="font-medium text-gray-800">{student.programme}</p>
-                              <p className="text-xs text-gray-500">{student.level}</p>
+                              {isEditing ? (
+                                <div className="space-y-1">
+                                  <select
+                                    value={editUserProgramme}
+                                    onChange={(e) => setEditUserProgramme(e.target.value)}
+                                    className="px-2 py-1 border border-gray-300 rounded text-sm w-full max-w-[160px] focus:ring-2 focus:ring-ttu-navy focus:border-transparent"
+                                  >
+                                    {PROGRAMMES.map(p => <option key={p} value={p}>{p}</option>)}
+                                  </select>
+                                  <select
+                                    value={editUserLevel}
+                                    onChange={(e) => setEditUserLevel(e.target.value)}
+                                    className="px-2 py-1 border border-gray-300 rounded text-sm w-full max-w-[160px] focus:ring-2 focus:ring-ttu-navy focus:border-transparent"
+                                  >
+                                    {LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
+                                  </select>
+                                </div>
+                              ) : (
+                                <>
+                                  <p className="font-medium text-gray-800">{student.programme}</p>
+                                  <p className="text-xs text-gray-500">{student.level}</p>
+                                </>
+                              )}
                             </td>
                             <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-600 hidden md:table-cell">
-                              {student.email}
+                              {isEditing ? (
+                                <input
+                                  type="email"
+                                  value={editUserEmail}
+                                  onChange={(e) => setEditUserEmail(e.target.value)}
+                                  className="px-2 py-1 border border-gray-300 rounded text-sm w-full max-w-[200px] focus:ring-2 focus:ring-ttu-navy focus:border-transparent"
+                                />
+                              ) : (
+                                student.email
+                              )}
                             </td>
                             <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
                               {deviceBinding ? (
@@ -598,18 +860,55 @@ export const AdminDashboard: React.FC = () => {
                               )}
                             </td>
                             <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-right">
-                              <button
-                                onClick={() => handleResetDevice(student.id, student.name)}
-                                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                                  deviceBinding
-                                    ? 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 cursor-pointer'
-                                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-200 cursor-pointer'
-                                }`}
-                                title="Reset device lock to let student sign in from a new device"
-                              >
-                                <RotateCcw className="w-3.5 h-3.5" />
-                                Reset Device
-                              </button>
+                              <div className="flex items-center justify-end gap-1">
+                                {isEditing ? (
+                                  <>
+                                    <button
+                                      onClick={() => handleSaveUser(student.id)}
+                                      className="p-1.5 text-green-600 hover:bg-green-100 rounded-lg transition-colors"
+                                      title="Save changes"
+                                    >
+                                      <Save className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => setEditingUserId(null)}
+                                      className="p-1.5 text-gray-400 hover:bg-gray-100 rounded-lg transition-colors"
+                                      title="Cancel"
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <button
+                                      onClick={() => startEditUser(student)}
+                                      className="p-1.5 text-gray-400 hover:text-ttu-navy hover:bg-ttu-navy-50 rounded-lg transition-colors"
+                                      title="Edit student"
+                                    >
+                                      <Edit3 className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleResetDevice(student.id, student.name)}
+                                      className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                                        deviceBinding
+                                          ? 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200'
+                                          : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-200'
+                                      }`}
+                                      title="Reset device lock"
+                                    >
+                                      <RotateCcw className="w-3.5 h-3.5" />
+                                      Reset
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteUser(student.id, student.name, 'student')}
+                                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                      title="Delete student"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         );

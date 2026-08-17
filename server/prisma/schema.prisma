@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id             String   @id @default(uuid())
+  email          String   @unique
+  passwordHash   String
+  name           String
+  role           String   @default("student") // student, lecturer, admin
+  studentId      String?  @unique
+  programme      String?
+  level          String?
+  profilePicture String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  coursesTaught      Course[]            @relation("LecturerCourses")
+  attendanceRecords  AttendanceRecord[]
+  deviceBinding      DeviceBinding?
+  createdSessions    AttendanceSession[]
+}
+
+model Course {
+  id          String   @id @default(uuid())
+  courseCode  String   @unique
+  courseName  String
+  programme   String
+  level       String
+  semester    String   @default("First Semester")
+  lecturerId  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  lecturer    User?               @relation("LecturerCourses", fields: [lecturerId], references: [id], onDelete: SetNull)
+  sessions    AttendanceSession[]
+  attendances AttendanceRecord[]
+}
+
+model AttendanceSession {
+  id           String    @id @default(uuid())
+  courseId     String
+  lecturerId   String
+  latitude     Float
+  longitude    Float
+  radiusMeters Float     @default(50.0)
+  otpCode      String?
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  endedAt      DateTime?
+
+  course       Course             @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lecturer     User               @relation(fields: [lecturerId], references: [id])
+  records      AttendanceRecord[]
+}
+
+model AttendanceRecord {
+  id        String   @id @default(uuid())
+  studentId String
+  courseId  String
+  sessionId String?
+  date      String   // YYYY-MM-DD
+  timestamp DateTime @default(now())
+  status    String   @default("present") // present, absent
+  isManual  Boolean  @default(false)
+  latitude  Float?
+  longitude Float?
+  distance  Float?
+
+  student User               @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  course  Course             @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  session AttendanceSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  @@unique([studentId, courseId, date])
+}
+
+model DeviceBinding {
+  id           String   @id @default(uuid())
+  studentId    String   @unique
+  fingerprint  String
+  registeredAt DateTime @default(now())
+  userAgent    String?
+
+  student User @relation(fields: [studentId], references: [id], onDelete: Cascade)
+}
