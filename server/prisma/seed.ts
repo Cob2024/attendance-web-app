@@ -113,7 +113,29 @@ async function main() {
       lecturerId: lecturer2.id,
     },
   });
-  console.log('✅ Courses created:', course1.courseCode, course2.courseCode, course3.courseCode);
+  // 5. Create Student Enrollments
+  const enrollments = [
+    { studentId: student1.id, courseId: course1.id },
+    { studentId: student1.id, courseId: course2.id },
+    { studentId: student1.id, courseId: course3.id },
+    { studentId: student2.id, courseId: course1.id },
+    { studentId: student2.id, courseId: course2.id },
+    { studentId: student2.id, courseId: course3.id },
+  ];
+
+  for (const enr of enrollments) {
+    await prisma.enrollment.upsert({
+      where: {
+        studentId_courseId: {
+          studentId: enr.studentId,
+          courseId: enr.courseId,
+        },
+      },
+      update: {},
+      create: enr,
+    });
+  }
+  console.log('✅ Student enrollments seeded');
 
   console.log('🎉 Seeding completed successfully!');
 }
