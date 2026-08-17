@@ -17,7 +17,23 @@ authRouter.post('/register', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Name, email, password, and role are required' });
     }
 
-    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (password.length < 6) {
+      return res.status(400).json({ success: false, error: 'Password must be at least 6 characters' });
+    }
+
+    // Security Hardening: Prevent self-registration as admin
+    if (role === 'admin') {
+      return res.status(403).json({
+        success: false,
+        error: 'Admin accounts cannot be created via public registration. Contact system administrator.'
+      });
+    }
+
+    if (role !== 'student' && role !== 'lecturer') {
+      return res.status(400).json({ success: false, error: 'Invalid user role specified' });
+    }
+
+    const existingUser = await prisma.user.findUnique({ where: { email: email.trim().toLowerCase() } });
     if (existingUser) {
       return res.status(400).json({ success: false, error: 'An account with this email already exists' });
     }
@@ -26,7 +42,7 @@ authRouter.post('/register', async (req, res) => {
       if (!studentId || !programme || !level) {
         return res.status(400).json({ success: false, error: 'Student ID, Programme, and Level are required for students' });
       }
-      const existingStudentId = await prisma.user.findUnique({ where: { studentId } });
+      const existingStudentId = await prisma.user.findUnique({ where: { studentId: studentId.trim() } });
       if (existingStudentId) {
         return res.status(400).json({ success: false, error: 'This Student ID is already registered' });
       }
@@ -55,7 +71,8 @@ authRouter.post('/register', async (req, res) => {
 
     return res.json({ success: true, user: userWithoutPassword, token });
   } catch (err: any) {
-    return res.status(500).json({ success: false, error: err.message || 'Registration failed' });
+    console.error('Registration Security Error:', err);
+    return res.status(500).json({ success: false, error: 'Registration processing failed' });
   }
 });
 
