@@ -275,39 +275,14 @@ export const Login: React.FC = () => {
                 </div>
               </div>
 
-              {/* Quick Demo Fill Buttons */}
+              {/* Default Administrator Quick Access */}
               {!isSignup && (
-                <div className="bg-gray-50 rounded-xl p-3 border border-gray-200 text-xs space-y-2">
-                  <p className="font-semibold text-gray-700 flex items-center gap-1">
-                    💡 Quick Demo Logins:
-                  </p>
-                  <div className="grid grid-cols-3 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setRole('student');
-                        setEmail('arhinful.emmanuel@ttu.edu.gh');
-                        setPassword('student123');
-                        setError('');
-                      }}
-                      className="px-2 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-800 rounded-lg font-medium text-[11px] truncate transition-colors text-center"
-                      title="Student Demo"
-                    >
-                      👨‍🎓 Student
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setRole('lecturer');
-                        setEmail('ernest.kudordjie@ttu.edu.gh');
-                        setPassword('lecturer123');
-                        setError('');
-                      }}
-                      className="px-2 py-1.5 bg-purple-100 hover:bg-purple-200 text-purple-800 rounded-lg font-medium text-[11px] truncate transition-colors text-center"
-                      title="Lecturer Demo"
-                    >
-                      👨‍🏫 Lecturer
-                    </button>
+                <div className="bg-amber-50/80 dark:bg-amber-950/40 rounded-xl p-3 border border-amber-200 dark:border-amber-800 text-xs">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="font-semibold text-amber-900 dark:text-amber-200">Default Admin:</span>
+                      <span className="text-amber-800 dark:text-amber-300 font-mono text-[11px] truncate">admin@ttu.edu.gh</span>
+                    </div>
                     <button
                       type="button"
                       onClick={() => {
@@ -316,10 +291,10 @@ export const Login: React.FC = () => {
                         setPassword('admin123');
                         setError('');
                       }}
-                      className="px-2 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-lg font-medium text-[11px] truncate transition-colors text-center"
-                      title="Admin Demo"
+                      className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-semibold text-[11px] transition-colors flex-shrink-0 cursor-pointer shadow-xs"
+                      title="Quick Fill Admin Credentials"
                     >
-                      🔑 Admin
+                      Fill Admin
                     </button>
                   </div>
                 </div>
