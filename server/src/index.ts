@@ -17,7 +17,7 @@ dotenv.config();
 
 const app = express();
 const httpServer = createServer(app);
-const PORT = process.env.PORT || 5000;
+const PORT = Number(process.env.PORT) || 5000;
 
 // Socket.io — Real-Time Event Server
 const corsOrigin = process.env.CLIENT_ORIGIN || '*';
@@ -95,7 +95,8 @@ app.use('/api/admin', adminRouter);
 app.use('/api/enrollments', enrollmentRouter);
 app.use('/api/notifications', notificationRouter);
 
-httpServer.listen(PORT, () => {
+httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 SmartAttend Security-Hardened Production Server running on port ${PORT}`);
   console.log(`⚡ Socket.io real-time server attached`);
 });
+
