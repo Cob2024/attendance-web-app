@@ -1,5 +1,5 @@
 // SmartAttend Service Worker — Network-first for navigation/HTML, Cache-first for hashed static assets
-const CACHE_NAME = 'smartattend-v2';
+const CACHE_NAME = 'smartattend-v3';
 const STATIC_ASSETS = [
   '/manifest.json',
 ];
@@ -58,26 +58,17 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // API calls — Network-first with offline fallback
+  // Security (L6): API calls — Network-only, NO caching.
+  // Caching authenticated API responses could leak sensitive data (attendance records, user lists, OTP codes)
+  // on shared or stolen devices.
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
       fetch(request)
-        .then((response) => {
-          if (response.ok) {
-            const responseClone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, responseClone);
-            });
-          }
-          return response;
-        })
         .catch(() => {
-          return caches.match(request).then((cached) => {
-            return cached || new Response(
-              JSON.stringify({ success: false, error: 'You are offline. Please check your connection.' }),
-              { status: 503, headers: { 'Content-Type': 'application/json' } }
-            );
-          });
+          return new Response(
+            JSON.stringify({ success: false, error: 'You are offline. Please check your connection.' }),
+            { status: 503, headers: { 'Content-Type': 'application/json' } }
+          );
         })
     );
     return;

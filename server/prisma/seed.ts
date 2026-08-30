@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 
 const prisma = new PrismaClient();
 
@@ -19,7 +20,9 @@ async function main() {
   });
 
   // 2. Create or Update Default Administrator
-  const adminPasswordHash = await bcrypt.hash('admin123', 10);
+  // Security (C2): Generate a cryptographically random password instead of hardcoded 'admin123'
+  const adminPassword = process.env.ADMIN_PASSWORD || crypto.randomBytes(16).toString('base64url');
+  const adminPasswordHash = await bcrypt.hash(adminPassword, 12);
   const admin = await prisma.user.upsert({
     where: { email: 'admin@ttu.edu.gh' },
     update: {},
@@ -32,7 +35,9 @@ async function main() {
   });
 
   console.log('✅ Clean slate initialized.');
-  console.log(`👤 Master Admin Account: ${admin.email} (Password: admin123)`);
+  console.log(`👤 Master Admin Account: ${admin.email}`);
+  console.log(`🔑 Admin Password: ${adminPassword}`);
+  console.log('⚠️  IMPORTANT: Save this password now. It will not be shown again.');
   console.log('🏛️ Ready for real departmental courses, lecturers, and student registrations.');
 }
 

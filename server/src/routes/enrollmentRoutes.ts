@@ -42,7 +42,7 @@ enrollmentRouter.post('/enroll', authenticateToken, requireRole(['admin', 'lectu
         });
         results.push(enrollment);
       } catch (err: any) {
-        errors.push({ studentId: sid, error: err.message });
+        errors.push({ studentId: sid, error: 'Failed to enroll student' });
       }
     }
 
@@ -53,7 +53,8 @@ enrollmentRouter.post('/enroll', authenticateToken, requireRole(['admin', 'lectu
       enrollments: results,
     });
   } catch (err: any) {
-    return res.status(500).json({ success: false, error: err.message });
+    console.error('Enrollment error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to process enrollment' });
   }
 });
 
@@ -83,14 +84,31 @@ enrollmentRouter.post('/unenroll', authenticateToken, requireRole(['admin', 'lec
     if (err.code === 'P2025') {
       return res.status(404).json({ success: false, error: 'Enrollment not found' });
     }
-    return res.status(500).json({ success: false, error: err.message });
+    console.error('Unenroll error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to process unenrollment' });
   }
 });
 
 // Get enrolled students for a course
-enrollmentRouter.get('/course/:courseId', authenticateToken, async (req, res) => {
+// Security (M4): Scoped by role
+enrollmentRouter.get('/course/:courseId', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const { courseId } = req.params;
+
+    // Security: Verify access — lecturers can only view their own courses, students can view courses they're enrolled in
+    if (req.user!.role === 'lecturer') {
+      const course = await prisma.course.findUnique({ where: { id: courseId } });
+      if (!course || course.lecturerId !== req.user!.id) {
+        return res.status(403).json({ success: false, error: 'You can only view enrollments for your own courses' });
+      }
+    } else if (req.user!.role === 'student') {
+      const enrollment = await prisma.enrollment.findUnique({
+        where: { studentId_courseId: { studentId: req.user!.id, courseId } },
+      });
+      if (!enrollment) {
+        return res.status(403).json({ success: false, error: 'You are not enrolled in this course' });
+      }
+    }
 
     const enrollments = await prisma.enrollment.findMany({
       where: { courseId },
@@ -118,15 +136,51 @@ enrollmentRouter.get('/course/:courseId', authenticateToken, async (req, res) =>
 
     return res.json({ success: true, students, count: students.length });
   } catch (err: any) {
-    return res.status(500).json({ success: false, error: err.message });
+    console.error('Enrollment fetch error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to fetch enrollments' });
   }
 });
 
 // Get courses a student is enrolled in
-enrollmentRouter.get('/student/:studentId', authenticateToken, async (req, res) => {
+// Security (M4): Students can only view their own enrollments
+enrollmentRouter.get('/student/:studentId', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const { studentId } = req.params;
 
+    // Security: Students can only view their own enrollments
+    if (req.user!.role === 'student' && req.user!.id !== studentId) {
+      return res.status(403).json({ success: false, error: 'You can only view your own enrollments' });
+    }
+
+    // Lecturers can only view enrollments for students in their courses
+    if (req.user!.role === 'lecturer') {
+      const lecturerCourses = await prisma.course.findMany({
+        where: { lecturerId: req.user!.id },
+        select: { id: true },
+      });
+      const courseIds = lecturerCourses.map(c => c.id);
+
+      const enrollments = await prisma.enrollment.findMany({
+        where: { studentId, courseId: { in: courseIds } },
+        include: {
+          course: {
+            include: {
+              lecturer: { select: { id: true, name: true, email: true } },
+            },
+          },
+        },
+        orderBy: { course: { courseCode: 'asc' } },
+      });
+
+      const courses = enrollments.map((e) => ({
+        ...e.course,
+        enrolledAt: e.enrolledAt,
+      }));
+
+      return res.json({ success: true, courses });
+    }
+
+    // Admin can see all
     const enrollments = await prisma.enrollment.findMany({
       where: { studentId },
       include: {
@@ -146,7 +200,8 @@ enrollmentRouter.get('/student/:studentId', authenticateToken, async (req, res) 
 
     return res.json({ success: true, courses });
   } catch (err: any) {
-    return res.status(500).json({ success: false, error: err.message });
+    console.error('Student enrollment fetch error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to fetch student enrollments' });
   }
 });
 
@@ -198,6 +253,7 @@ enrollmentRouter.post('/auto-enroll/:courseId', authenticateToken, requireRole([
       message: `Auto-enrolled ${enrolled} students from ${course.programme} ${course.level}`,
     });
   } catch (err: any) {
-    return res.status(500).json({ success: false, error: err.message });
+    console.error('Auto-enroll error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to auto-enroll students' });
   }
 });

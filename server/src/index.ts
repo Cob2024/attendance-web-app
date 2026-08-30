@@ -5,6 +5,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
+import jwt from 'jsonwebtoken';
 import { setIO } from './socket.js';
 import { authRouter } from './routes/authRoutes.js';
 import { courseRouter } from './routes/courseRoutes.js';
@@ -15,12 +16,23 @@ import { notificationRouter } from './routes/notificationRoutes.js';
 
 dotenv.config();
 
+// Security: Crash early if JWT_SECRET is not set
+if (!process.env.JWT_SECRET) {
+  console.error('❌ FATAL: JWT_SECRET environment variable is not set. Server cannot start.');
+  process.exit(1);
+}
+
 const app = express();
 const httpServer = createServer(app);
 const PORT = Number(process.env.PORT) || 5000;
 
+// Security (H5): Lock down CORS origin — no wildcards in production
+const corsOrigin = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
+if (process.env.NODE_ENV === 'production' && corsOrigin === '*') {
+  console.warn('⚠️  WARNING: CORS origin is set to wildcard (*) in production. This is insecure.');
+}
+
 // Socket.io — Real-Time Event Server
-const corsOrigin = process.env.CLIENT_ORIGIN || '*';
 const io = new Server(httpServer, {
   cors: {
     origin: corsOrigin,
@@ -29,11 +41,30 @@ const io = new Server(httpServer, {
   },
 });
 
+// Security (H3): Socket.io JWT Authentication Middleware
+// Reject unauthenticated connections before they can join rooms or receive events
+io.use((socket, next) => {
+  const token = socket.handshake.auth?.token || socket.handshake.headers?.authorization?.split(' ')[1];
+
+  if (!token) {
+    return next(new Error('Authentication required'));
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+    (socket as any).user = decoded;
+    next();
+  } catch (err) {
+    return next(new Error('Invalid or expired token'));
+  }
+});
+
 // Register the io instance in the shared singleton
 setIO(io);
 
 io.on('connection', (socket) => {
-  console.log(`⚡ Client connected: ${socket.id}`);
+  const user = (socket as any).user;
+  console.log(`⚡ Client connected: ${socket.id} (${user?.email || 'unknown'})`);
 
   // Allow clients to join course-specific rooms for targeted events
   socket.on('join:course', (courseId: string) => {
@@ -69,18 +100,30 @@ const authLimiter = rateLimit({
   message: { success: false, error: 'Too many authentication attempts, please try again after 15 minutes.' },
 });
 
+// Security (L3): Stricter rate limit for sensitive operations
+const sensitiveLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10, // Max 10 attempts per 15 mins
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many attempts. Please try again later.' },
+});
+
 // CORS Configuration
 app.use(cors({
   origin: corsOrigin,
   credentials: true,
 }));
 
-app.use(express.json({ limit: '10mb' }));
+// Security (L4): Tighter JSON body size limit (was 10mb)
+app.use(express.json({ limit: '1mb' }));
 
 // Apply Rate Limiters
 app.use('/api/', apiLimiter);
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
+app.use('/api/auth/change-password', sensitiveLimiter);
+app.use('/api/admin/device/reset', sensitiveLimiter);
 
 // Root & Health Check Endpoints
 app.get('/', (req, res) => {
@@ -115,6 +158,5 @@ app.use('/api/notifications', notificationRouter);
 
 httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 SmartAttend Security-Hardened Production Server running on port ${PORT}`);
-  console.log(`⚡ Socket.io real-time server attached`);
+  console.log(`⚡ Socket.io real-time server attached (JWT-authenticated)`);
 });
-

@@ -14,7 +14,7 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: CLIENT_ORIGIN
-        value: '*'
+        value: 'https://attendance-web-app-lac.vercel.app'
       - key: DATABASE_URL
         value: file:./dev.db
 

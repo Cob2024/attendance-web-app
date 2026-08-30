@@ -1,12 +1,22 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
+// Security: JWT_SECRET must be set via environment variable.
+// The server MUST NOT start with a hardcoded or fallback secret.
+if (!process.env.JWT_SECRET) {
+  console.error('❌ FATAL: JWT_SECRET environment variable is not set. Server cannot start securely.');
+  process.exit(1);
+}
+
+export const JWT_SECRET: string = process.env.JWT_SECRET;
+
 export interface AuthRequest extends Request {
   user?: {
     id: string;
     email: string;
     role: string;
     name: string;
+    iat?: number;
   };
 }
 
@@ -22,13 +32,11 @@ export const authenticateToken = (
     return res.status(401).json({ success: false, error: 'Access token required' });
   }
 
-  const secret = process.env.JWT_SECRET || 'smartattend_secret';
-
-  jwt.verify(token, secret, (err: any, user: any) => {
+  jwt.verify(token, JWT_SECRET, (err: any, decoded: any) => {
     if (err) {
       return res.status(403).json({ success: false, error: 'Invalid or expired token' });
     }
-    req.user = user;
+    req.user = decoded;
     next();
   });
 };

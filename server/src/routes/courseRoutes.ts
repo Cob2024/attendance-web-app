@@ -54,7 +54,8 @@ courseRouter.get('/', authenticateToken, async (req: AuthRequest, res) => {
 
     return res.status(400).json({ success: false, error: 'Invalid user role' });
   } catch (err: any) {
-    return res.status(500).json({ success: false, error: err.message });
+    console.error('Course fetch error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to fetch courses' });
   }
 });
 
@@ -85,7 +86,8 @@ courseRouter.post('/', authenticateToken, requireRole(['admin']), async (req, re
 
     return res.json({ success: true, course });
   } catch (err: any) {
-    return res.status(500).json({ success: false, error: err.message });
+    console.error('Course create error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to create course' });
   }
 });
 
@@ -109,7 +111,8 @@ courseRouter.put('/:id', authenticateToken, requireRole(['admin']), async (req, 
 
     return res.json({ success: true, course });
   } catch (err: any) {
-    return res.status(500).json({ success: false, error: err.message });
+    console.error('Course update error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to update course' });
   }
 });
 
@@ -120,6 +123,7 @@ courseRouter.delete('/:id', authenticateToken, requireRole(['admin']), async (re
     await prisma.course.delete({ where: { id } });
     return res.json({ success: true });
   } catch (err: any) {
-    return res.status(500).json({ success: false, error: err.message });
+    console.error('Course delete error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to delete course' });
   }
 });

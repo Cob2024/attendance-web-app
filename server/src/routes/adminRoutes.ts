@@ -28,7 +28,8 @@ adminRouter.get('/users', async (req, res) => {
     });
     return res.json({ success: true, users });
   } catch (err: any) {
-    return res.status(500).json({ success: false, error: err.message });
+    console.error('Admin users fetch error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to fetch users' });
   }
 });
 
@@ -44,7 +45,7 @@ adminRouter.put('/users/:id', async (req, res) => {
     if (studentId !== undefined) data.studentId = studentId?.trim();
     if (programme !== undefined) data.programme = programme?.trim();
     if (level !== undefined) data.level = level?.trim();
-    if (password) data.passwordHash = await bcrypt.hash(password, 10);
+    if (password) data.passwordHash = await bcrypt.hash(password, 12);
 
     const user = await prisma.user.update({
       where: { id },
@@ -54,7 +55,8 @@ adminRouter.put('/users/:id', async (req, res) => {
     const { passwordHash: _, ...userWithout } = user;
     return res.json({ success: true, user: userWithout });
   } catch (err: any) {
-    return res.status(500).json({ success: false, error: err.message });
+    console.error('Admin user update error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to update user' });
   }
 });
 
@@ -65,12 +67,17 @@ adminRouter.delete('/users/:id', async (req, res) => {
     const targetUser = await prisma.user.findUnique({ where: { id } });
 
     if (!targetUser) return res.status(404).json({ success: false, error: 'User not found' });
-    if (targetUser.role === 'admin') return { success: false, error: 'Cannot delete admin accounts' };
+
+    // Security Fix: Previously returned a plain object instead of HTTP response — admin accounts were deletable!
+    if (targetUser.role === 'admin') {
+      return res.status(403).json({ success: false, error: 'Cannot delete admin accounts' });
+    }
 
     await prisma.user.delete({ where: { id } });
     return res.json({ success: true });
   } catch (err: any) {
-    return res.status(500).json({ success: false, error: err.message });
+    console.error('Admin user delete error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to delete user' });
   }
 });
 
@@ -86,6 +93,8 @@ adminRouter.post('/device/reset', async (req, res) => {
 
     return res.json({ success: true });
   } catch (err: any) {
-    return res.status(500).json({ success: false, error: err.message });
+    console.error('Device reset error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to reset device binding' });
   }
 });
+

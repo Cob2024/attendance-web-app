@@ -57,7 +57,8 @@ notificationRouter.get('/attendance-warnings/:courseId', authenticateToken, requ
 
     return res.json({ success: true, warnings, totalSessions, threshold });
   } catch (err: any) {
-    return res.status(500).json({ success: false, error: err.message });
+    console.error('Attendance warnings error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to fetch attendance warnings' });
   }
 });
 
@@ -115,7 +116,8 @@ notificationRouter.get('/student-warnings/:studentId', authenticateToken, async 
 
     return res.json({ success: true, warnings, threshold });
   } catch (err: any) {
-    return res.status(500).json({ success: false, error: err.message });
+    console.error('Student warnings error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to fetch student warnings' });
   }
 });
 
@@ -190,6 +192,7 @@ notificationRouter.get('/system-risk-report', authenticateToken, requireRole(['a
 
     return res.json({ success: true, report, threshold });
   } catch (err: any) {
-    return res.status(500).json({ success: false, error: err.message });
+    console.error('System risk report error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to generate risk report' });
   }
 });

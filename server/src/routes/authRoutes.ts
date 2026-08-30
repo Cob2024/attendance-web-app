@@ -2,11 +2,9 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../db.js';
-import { authenticateToken, AuthRequest } from '../middleware/auth.js';
+import { authenticateToken, AuthRequest, JWT_SECRET } from '../middleware/auth.js';
 
 export const authRouter = Router();
-
-const JWT_SECRET = process.env.JWT_SECRET || 'smartattend_secret';
 
 // Register User
 authRouter.post('/register', async (req, res) => {
@@ -48,7 +46,7 @@ authRouter.post('/register', async (req, res) => {
       }
     }
 
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await bcrypt.hash(password, 12);
 
     const user = await prisma.user.create({
       data: {
@@ -133,7 +131,8 @@ authRouter.post('/login', async (req, res) => {
 
     return res.json({ success: true, user: userWithoutPassword, token });
   } catch (err: any) {
-    return res.status(500).json({ success: false, error: err.message || 'Login failed' });
+    console.error('Login Error:', err);
+    return res.status(500).json({ success: false, error: 'Login processing failed' });
   }
 });
 
@@ -148,7 +147,8 @@ authRouter.get('/me', authenticateToken, async (req: AuthRequest, res) => {
     const { passwordHash: _, ...userWithoutPassword } = user;
     return res.json({ success: true, user: userWithoutPassword });
   } catch (err: any) {
-    return res.status(500).json({ success: false, error: err.message });
+    console.error('Profile fetch error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to fetch profile' });
   }
 });
 
@@ -171,14 +171,28 @@ authRouter.post('/change-password', authenticateToken, async (req: AuthRequest, 
       return res.status(400).json({ success: false, error: 'Current password is incorrect' });
     }
 
-    const newHash = await bcrypt.hash(newPassword, 10);
+    const newHash = await bcrypt.hash(newPassword, 12);
     await prisma.user.update({
       where: { id: user.id },
-      data: { passwordHash: newHash },
+      data: {
+        passwordHash: newHash,
+        // Security: Store the timestamp so we can invalidate old tokens
+        updatedAt: new Date(),
+      },
     });
 
-    return res.json({ success: true });
+    // Issue a fresh token so the user stays logged in with the new password
+    const newToken = jwt.sign(
+      { id: user.id, email: user.email, role: user.role, name: user.name },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    return res.json({ success: true, token: newToken });
   } catch (err: any) {
-    return res.status(500).json({ success: false, error: err.message });
+    console.error('Password change error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to change password' });
   }
 });
+
+

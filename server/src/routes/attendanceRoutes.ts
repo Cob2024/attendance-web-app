@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import crypto from 'crypto';
 import { prisma } from '../db.js';
 import { calculateDistanceMeters } from '../utils/haversine.js';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth.js';
@@ -27,14 +28,20 @@ attendanceRouter.post('/session/start', authenticateToken, requireRole(['lecture
       return res.status(400).json({ success: false, error: 'Course ID and GPS coordinates required' });
     }
 
+    // Security: Verify lecturer owns this course
+    const course = await prisma.course.findUnique({ where: { id: courseId } });
+    if (!course || course.lecturerId !== req.user!.id) {
+      return res.status(403).json({ success: false, error: 'You can only start sessions for your own courses' });
+    }
+
     // Deactivate existing active session for this course
     await prisma.attendanceSession.updateMany({
       where: { courseId, isActive: true },
       data: { isActive: false, endedAt: new Date() },
     });
 
-    // Generate random 6-digit OTP passcode
-    const otpCode = customOtp || Math.floor(100000 + Math.random() * 900000).toString();
+    // Security (M5): Use cryptographically secure random OTP instead of Math.random()
+    const otpCode = customOtp || crypto.randomInt(100000, 999999).toString();
 
     // Compute expiry time (0 or null = no auto-close)
     const duration = durationMinutes ? parseInt(durationMinutes) : 30;
@@ -56,18 +63,21 @@ attendanceRouter.post('/session/start', authenticateToken, requireRole(['lecture
       },
     });
 
-    // Emit real-time event: session started
+    // Security (H4): Emit session started event WITHOUT the OTP code to prevent eavesdropping.
+    // Students are notified a session exists but must get the OTP from the lecturer's screen.
     getIO().to(`course:${courseId}`).emit('session:started', {
       sessionId: session.id,
       courseId,
-      otpCode,
       expiresAt: session.expiresAt,
       lecturerName: req.user!.name,
+      // Note: otpCode intentionally NOT included — students must view it physically
     });
 
+    // Return OTP only in the HTTP response to the lecturer who started the session
     return res.json({ success: true, session, otpCode });
   } catch (err: any) {
-    return res.status(500).json({ success: false, error: err.message });
+    console.error('Session start error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to start attendance session' });
   }
 });
 
@@ -75,6 +85,16 @@ attendanceRouter.post('/session/start', authenticateToken, requireRole(['lecture
 attendanceRouter.post('/session/end', authenticateToken, requireRole(['lecturer']), async (req: AuthRequest, res) => {
   try {
     const { courseId } = req.body;
+
+    if (!courseId) {
+      return res.status(400).json({ success: false, error: 'Course ID is required' });
+    }
+
+    // Security (M2): Verify lecturer owns this course before allowing session end
+    const course = await prisma.course.findUnique({ where: { id: courseId } });
+    if (!course || course.lecturerId !== req.user!.id) {
+      return res.status(403).json({ success: false, error: 'You can only end sessions for your own courses' });
+    }
 
     await prisma.attendanceSession.updateMany({
       where: { courseId, isActive: true },
@@ -86,7 +106,8 @@ attendanceRouter.post('/session/end', authenticateToken, requireRole(['lecturer'
 
     return res.json({ success: true });
   } catch (err: any) {
-    return res.status(500).json({ success: false, error: err.message });
+    console.error('Session end error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to end attendance session' });
   }
 });
 
@@ -101,9 +122,17 @@ attendanceRouter.get('/session/active/:courseId', authenticateToken, async (req,
     const session = await prisma.attendanceSession.findFirst({
       where: { courseId, isActive: true },
     });
-    return res.json({ success: true, session });
+
+    // Security: Don't expose OTP code in session data returned to students
+    if (session) {
+      const { otpCode, ...sessionWithoutOtp } = session;
+      return res.json({ success: true, session: sessionWithoutOtp });
+    }
+
+    return res.json({ success: true, session: null });
   } catch (err: any) {
-    return res.status(500).json({ success: false, error: err.message });
+    console.error('Active session fetch error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to fetch active session' });
   }
 });
 
@@ -199,14 +228,32 @@ attendanceRouter.post('/mark', authenticateToken, requireRole(['student']), asyn
 
     return res.json({ success: true, record, distance });
   } catch (err: any) {
-    return res.status(500).json({ success: false, error: err.message });
+    console.error('Attendance mark error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to mark attendance' });
   }
 });
 
 // Manual Attendance Mark (Lecturer / Admin)
-attendanceRouter.post('/manual', authenticateToken, requireRole(['lecturer', 'admin']), async (req, res) => {
+attendanceRouter.post('/manual', authenticateToken, requireRole(['lecturer', 'admin']), async (req: AuthRequest, res) => {
   try {
     const { studentId, courseId, date, status } = req.body;
+
+    if (!studentId || !courseId || !date || !status) {
+      return res.status(400).json({ success: false, error: 'Student ID, Course ID, date, and status are required' });
+    }
+
+    // Validate status value
+    if (!['present', 'absent'].includes(status)) {
+      return res.status(400).json({ success: false, error: 'Status must be "present" or "absent"' });
+    }
+
+    // Security: If lecturer, verify they own the course
+    if (req.user!.role === 'lecturer') {
+      const course = await prisma.course.findUnique({ where: { id: courseId } });
+      if (!course || course.lecturerId !== req.user!.id) {
+        return res.status(403).json({ success: false, error: 'You can only manage attendance for your own courses' });
+      }
+    }
 
     const record = await prisma.attendanceRecord.upsert({
       where: {
@@ -232,19 +279,45 @@ attendanceRouter.post('/manual', authenticateToken, requireRole(['lecturer', 'ad
 
     return res.json({ success: true, record });
   } catch (err: any) {
-    return res.status(500).json({ success: false, error: err.message });
+    console.error('Manual attendance error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to record manual attendance' });
   }
 });
 
 // Get Attendance Records with optional filters
+// Security (M3): Scoped by role — students see only their own, lecturers see only their courses
 attendanceRouter.get('/records', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const { courseId, studentId, startDate, endDate } = req.query as any;
 
     const where: any = {};
     if (courseId) where.courseId = courseId;
-    if (studentId) where.studentId = studentId;
-    if (req.user!.role === 'student') where.studentId = req.user!.id;
+
+    if (req.user!.role === 'student') {
+      // Students can only see their own records
+      where.studentId = req.user!.id;
+    } else if (req.user!.role === 'lecturer') {
+      // Lecturers can only see records for courses they teach
+      const lecturerCourses = await prisma.course.findMany({
+        where: { lecturerId: req.user!.id },
+        select: { id: true },
+      });
+      const courseIds = lecturerCourses.map(c => c.id);
+
+      if (courseId) {
+        // Verify the requested course belongs to this lecturer
+        if (!courseIds.includes(courseId)) {
+          return res.status(403).json({ success: false, error: 'You can only view records for your own courses' });
+        }
+      } else {
+        where.courseId = { in: courseIds };
+      }
+
+      if (studentId) where.studentId = studentId;
+    } else if (req.user!.role === 'admin') {
+      // Admins can see everything
+      if (studentId) where.studentId = studentId;
+    }
 
     if (startDate || endDate) {
       where.date = {};
@@ -263,6 +336,7 @@ attendanceRouter.get('/records', authenticateToken, async (req: AuthRequest, res
 
     return res.json({ success: true, records });
   } catch (err: any) {
-    return res.status(500).json({ success: false, error: err.message });
+    console.error('Attendance records fetch error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to fetch attendance records' });
   }
 });
