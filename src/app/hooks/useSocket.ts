@@ -5,10 +5,12 @@ const getSocketUrl = (): string => {
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL.replace('/api', '');
   }
-  if (typeof window !== 'undefined' && window.location.hostname && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-    return `http://${window.location.hostname}:5000`;
+  if (typeof window !== 'undefined') {
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return 'http://localhost:5000';
+    }
   }
-  return 'http://localhost:5000';
+  return 'https://attendace-web-app.onrender.com';
 };
 
 const SOCKET_URL = getSocketUrl();
