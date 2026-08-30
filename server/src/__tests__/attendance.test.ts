@@ -1,5 +1,5 @@
 import request from 'supertest';
-import { app } from './testApp';
+import { app } from './testApp.js';
 
 describe('Attendance API', () => {
   // -----------------------------------------------

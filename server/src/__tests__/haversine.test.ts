@@ -1,4 +1,4 @@
-import { calculateDistanceMeters } from '../utils/haversine';
+import { calculateDistanceMeters } from '../utils/haversine.js';
 
 describe('Haversine Distance Calculation', () => {
   test('should return 0 for identical coordinates', () => {
