@@ -20,12 +20,14 @@ async function main() {
   });
 
   // 2. Create or Update Default Administrator
-  // Security (C2): Generate a cryptographically random password instead of hardcoded 'admin123'
-  const adminPassword = process.env.ADMIN_PASSWORD || crypto.randomBytes(16).toString('base64url');
+  const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
   const adminPasswordHash = await bcrypt.hash(adminPassword, 12);
   const admin = await prisma.user.upsert({
     where: { email: 'admin@ttu.edu.gh' },
-    update: {},
+    update: {
+      passwordHash: adminPasswordHash,
+      role: 'admin',
+    },
     create: {
       name: 'System Administrator',
       email: 'admin@ttu.edu.gh',

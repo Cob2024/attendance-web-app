@@ -275,7 +275,7 @@ export const Login: React.FC = () => {
                 </div>
               </div>
 
-              {!isSignup && role === 'admin' && (
+              {!isSignup && (
                 <div className="bg-amber-50/80 dark:bg-amber-950/40 rounded-xl p-3 border border-amber-200 dark:border-amber-800 text-xs">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-1.5 min-w-0">
@@ -285,13 +285,15 @@ export const Login: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => {
+                        setRole('admin');
                         setEmail('admin@ttu.edu.gh');
+                        setPassword('admin123');
                         setError('');
                       }}
                       className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-semibold text-[11px] transition-colors flex-shrink-0 cursor-pointer shadow-xs"
-                      title="Auto-fill admin email"
+                      title="Quick Fill Admin Credentials"
                     >
-                      Fill Email
+                      Fill Admin
                     </button>
                   </div>
                 </div>

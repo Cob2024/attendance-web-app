@@ -156,7 +156,33 @@ app.use('/api/admin', adminRouter);
 app.use('/api/enrollments', enrollmentRouter);
 app.use('/api/notifications', notificationRouter);
 
-httpServer.listen(PORT, '0.0.0.0', () => {
+import bcrypt from 'bcryptjs';
+import { prisma } from './db.js';
+
+// Auto-provision initial Admin account if one does not exist
+async function ensureAdminAccount() {
+  try {
+    const adminExists = await prisma.user.findFirst({ where: { role: 'admin' } });
+    if (!adminExists) {
+      const password = process.env.ADMIN_PASSWORD || 'admin123';
+      const passwordHash = await bcrypt.hash(password, 12);
+      await prisma.user.create({
+        data: {
+          name: 'System Administrator',
+          email: 'admin@ttu.edu.gh',
+          passwordHash,
+          role: 'admin',
+        },
+      });
+      console.log('👤 Initial Admin account auto-provisioned: admin@ttu.edu.gh');
+    }
+  } catch (e) {
+    console.error('Error ensuring admin account:', e);
+  }
+}
+
+httpServer.listen(PORT, '0.0.0.0', async () => {
+  await ensureAdminAccount();
   console.log(`🚀 SmartAttend Security-Hardened Production Server running on port ${PORT}`);
   console.log(`⚡ Socket.io real-time server attached (JWT-authenticated)`);
 });
