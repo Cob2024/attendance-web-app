@@ -82,7 +82,25 @@ app.use('/api/', apiLimiter);
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
 
-// Health Check
+// Root & Health Check Endpoints
+app.get('/', (req, res) => {
+  res.json({
+    status: 'online',
+    service: 'SmartAttend Production Backend API',
+    institution: 'Takoradi Technical University (TTU)',
+    endpoints: {
+      health: '/api/health',
+      auth: '/api/auth',
+      courses: '/api/courses',
+      attendance: '/api/attendance',
+      admin: '/api/admin',
+      enrollments: '/api/enrollments',
+      notifications: '/api/notifications',
+    },
+    timestamp: new Date().toISOString(),
+  });
+});
+
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', service: 'SmartAttend Security-Hardened API', timestamp: new Date().toISOString() });
 });
