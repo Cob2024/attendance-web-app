@@ -13,6 +13,9 @@ export async function registerServiceWorker() {
       scope: '/',
     });
 
+    // Check for updates immediately
+    registration.update().catch(() => {});
+
     console.log('✅ SmartAttend Service Worker registered:', registration.scope);
 
     // Listen for updates

@@ -1,13 +1,10 @@
-// SmartAttend Service Worker — Cache-first for static, network-first for API
-const CACHE_NAME = 'smartattend-v1';
+// SmartAttend Service Worker — Network-first for navigation/HTML, Cache-first for hashed static assets
+const CACHE_NAME = 'smartattend-v2';
 const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/assets/ttu-logo.png',
   '/manifest.json',
 ];
 
-// Install — precache static shell
+// Install — precache core manifest
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
@@ -17,7 +14,7 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// Activate — clean old caches
+// Activate — clean old caches immediately
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -39,12 +36,33 @@ self.addEventListener('fetch', (event) => {
   // Skip non-GET requests
   if (request.method !== 'GET') return;
 
-  // API calls — Network-first with cache fallback
+  // HTML / Navigation requests — Network-first (so latest deployed updates always show up immediately)
+  if (request.mode === 'navigate' || request.destination === 'document') {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response.ok) {
+            const responseClone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(request, responseClone);
+            });
+          }
+          return response;
+        })
+        .catch(() => {
+          return caches.match(request).then((cached) => {
+            return cached || caches.match('/index.html') || new Response('Offline', { status: 503 });
+          });
+        })
+    );
+    return;
+  }
+
+  // API calls — Network-first with offline fallback
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          // Cache successful GET API responses for offline fallback
           if (response.ok) {
             const responseClone = response.clone();
             caches.open(CACHE_NAME).then((cache) => {
@@ -65,29 +83,20 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Static assets — Cache-first with network fallback
+  // Static assets (CSS, JS, images) — Stale-While-Revalidate
   event.respondWith(
     caches.match(request).then((cached) => {
-      if (cached) return cached;
+      const fetchPromise = fetch(request).then((networkResponse) => {
+        if (networkResponse.ok) {
+          const responseClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(request, responseClone);
+          });
+        }
+        return networkResponse;
+      }).catch(() => cached);
 
-      return fetch(request)
-        .then((response) => {
-          // Cache new static assets
-          if (response.ok && (url.pathname.endsWith('.js') || url.pathname.endsWith('.css') || url.pathname.endsWith('.png') || url.pathname.endsWith('.jpg'))) {
-            const responseClone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, responseClone);
-            });
-          }
-          return response;
-        })
-        .catch(() => {
-          // Fallback for navigation requests
-          if (request.mode === 'navigate') {
-            return caches.match('/index.html');
-          }
-          return new Response('Offline', { status: 503 });
-        });
+      return cached || fetchPromise;
     })
   );
 });
