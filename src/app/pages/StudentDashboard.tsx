@@ -13,7 +13,7 @@ import {
   getAttendanceStats
 } from '../services/mockData';
 import { getCurrentPosition } from '../services/geolocation';
-import { markAttendanceApi } from '../services/apiData';
+import { markAttendanceApi, getCoursesApi, getAttendanceRecordsApi } from '../services/apiData';
 import { checkServerHealth } from '../services/apiClient';
 import {
   CheckCircle,
@@ -46,13 +46,34 @@ export const StudentDashboard: React.FC = () => {
   const isCoursesView = location.pathname.startsWith('/student/courses');
 
   useEffect(() => {
-    if (user) {
+    const fetchStudentData = async () => {
+      if (!user) return;
+      const isOnline = await checkServerHealth();
+      if (isOnline) {
+        const [allCourses, records] = await Promise.all([
+          getCoursesApi(),
+          getAttendanceRecordsApi({ studentId: user.id })
+        ]);
+        if (allCourses && Array.isArray(allCourses)) {
+          const myCourses = allCourses.filter(
+            (c: any) =>
+              (user.programme && c.programme === user.programme && user.level && c.level === user.level) ||
+              c.students?.some((s: any) => s.id === user.id)
+          );
+          setCourses(myCourses);
+        }
+        if (records && Array.isArray(records)) {
+          setAttendanceHistory(records);
+        }
+        return;
+      }
+
       const studentCourses = getStudentCourses(user.id);
       setCourses(studentCourses);
-
       const history = getStudentAttendance(user.id);
       setAttendanceHistory(history);
-    }
+    };
+    fetchStudentData();
   }, [user]);
 
   // Poll for active sessions every 10 seconds

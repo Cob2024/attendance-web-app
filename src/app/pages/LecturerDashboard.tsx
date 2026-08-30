@@ -15,6 +15,15 @@ import {
   exportAttendanceCSV,
   getSessionHistory
 } from '../services/mockData';
+import { checkServerHealth } from '../services/apiClient';
+import {
+  getCoursesApi,
+  startSessionApi,
+  endSessionApi,
+  getActiveSessionApi,
+  manualMarkAttendanceApi,
+  getAttendanceRecordsApi
+} from '../services/apiData';
 import { getCurrentPosition } from '../services/geolocation';
 import { EditProfileModal } from '../components/EditProfileModal';
 import {
@@ -77,14 +86,28 @@ export const LecturerDashboard: React.FC = () => {
   const { joinCourse, leaveCourse, on, off } = useSocket();
 
   useEffect(() => {
-    if (user) {
+    const fetchCourses = async () => {
+      if (!user) return;
+      const isOnline = await checkServerHealth();
+      if (isOnline) {
+        const allCourses = await getCoursesApi();
+        if (allCourses && Array.isArray(allCourses)) {
+          const myCourses = allCourses.filter((c: any) => c.lecturerId === user.id);
+          setCourses(myCourses);
+          if (myCourses.length > 0 && !selectedCourse) {
+            setSelectedCourse(myCourses[0]);
+          }
+          return;
+        }
+      }
+
       const lecturerCourses = getLecturerCourses(user.id);
       setCourses(lecturerCourses);
-
       if (lecturerCourses.length > 0 && !selectedCourse) {
         setSelectedCourse(lecturerCourses[0]);
       }
-    }
+    };
+    fetchCourses();
   }, [user]);
 
   useEffect(() => {
@@ -182,6 +205,23 @@ export const LecturerDashboard: React.FC = () => {
 
     try {
       const position = await getCurrentPosition();
+      const isOnline = await checkServerHealth();
+      if (isOnline) {
+        const apiRes = await startSessionApi(
+          selectedCourse.id,
+          position.latitude,
+          position.longitude,
+          50,
+          sessionDuration
+        );
+        if (apiRes.success && apiRes.session) {
+          setActiveCode(apiRes.session);
+          const durationLabel = sessionDuration > 0 ? `(${sessionDuration} min)` : '(Until stopped)';
+          toast.success(`Attendance session started ${durationLabel}! GPS Geofence active.`);
+          return;
+        }
+      }
+
       const newSession = startAttendanceSession(
         selectedCourse.id,
         user.id,
@@ -199,8 +239,13 @@ export const LecturerDashboard: React.FC = () => {
     }
   };
 
-  const handleEndSession = () => {
+  const handleEndSession = async () => {
     if (!selectedCourse) return;
+    const isOnline = await checkServerHealth();
+    if (isOnline) {
+      await endSessionApi(selectedCourse.id);
+    }
+
     deactivateCode(selectedCourse.id);
     setActiveCode(null);
     setSessionStudentCount(0);

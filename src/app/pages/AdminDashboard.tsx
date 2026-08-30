@@ -26,6 +26,18 @@ import {
   getCourseAttendance,
   exportAllAttendanceCSV
 } from '../services/mockData';
+import { checkServerHealth } from '../services/apiClient';
+import {
+  getAllUsersApi,
+  getCoursesApi,
+  createCourseApi,
+  updateCourseApi,
+  deleteCourseApi,
+  deleteUserApi,
+  adminUpdateUserApi,
+  resetDeviceBindingApi,
+  registerUserApi
+} from '../services/apiData';
 import {
   BookOpen,
   Users,
@@ -79,7 +91,28 @@ export const AdminDashboard: React.FC = () => {
   const [editingCourseId, setEditingCourseId] = useState<string | null>(null);
   const [editLecturerId, setEditLecturerId] = useState('');
 
-  const refreshData = () => {
+  const refreshData = async () => {
+    try {
+      const isOnline = await checkServerHealth();
+      if (isOnline) {
+        const [apiCourses, apiUsers] = await Promise.all([
+          getCoursesApi(),
+          getAllUsersApi()
+        ]);
+        if (apiCourses && Array.isArray(apiCourses)) {
+          setCourses(apiCourses);
+        }
+        if (apiUsers && Array.isArray(apiUsers)) {
+          setLecturers(apiUsers.filter((u: any) => u.role === 'lecturer'));
+          setStudents(apiUsers.filter((u: any) => u.role === 'student'));
+        }
+        setDeviceBindings(JSON.parse(localStorage.getItem('deviceBindings') || '{}'));
+        return;
+      }
+    } catch (e) {
+      console.warn('Backend offline, using local storage fallback', e);
+    }
+
     setCourses([...getAllCourses()]);
     setLecturers([...getAllLecturers()]);
     setStudents([...getAllStudents()]);
@@ -110,10 +143,33 @@ export const AdminDashboard: React.FC = () => {
     refreshData();
   }, []);
 
-  const handleCreateCourse = () => {
+  const handleCreateCourse = async () => {
     if (!newCourseName.trim() || !newCourseCode.trim() || !newLecturerId) {
       toast.error('Please fill in all fields and select a lecturer');
       return;
+    }
+
+    const isOnline = await checkServerHealth();
+    if (isOnline) {
+      const apiRes = await createCourseApi(
+        newCourseName.trim(),
+        newCourseCode.trim().toUpperCase(),
+        newProgramme,
+        newLevel,
+        newLecturerId
+      );
+      if (apiRes.success) {
+        toast.success('Course created and lecturer assigned!');
+        setShowCreateCourse(false);
+        setNewCourseName('');
+        setNewCourseCode('');
+        setNewLecturerId('');
+        refreshData();
+        return;
+      } else {
+        toast.error(apiRes.error || 'Failed to create course on server');
+        return;
+      }
     }
 
     const result = createCourse(
@@ -137,8 +193,18 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handleDeleteCourse = (courseId: string, courseName: string) => {
+  const handleDeleteCourse = async (courseId: string, courseName: string) => {
     if (window.confirm(`Delete "${courseName}"? This will also remove all attendance records for this course.`)) {
+      const isOnline = await checkServerHealth();
+      if (isOnline) {
+        const apiRes = await deleteCourseApi(courseId);
+        if (apiRes.success) {
+          toast.success('Course deleted');
+          refreshData();
+          return;
+        }
+      }
+
       const result = deleteCourse(courseId);
       if (result.success) {
         toast.success('Course deleted');
@@ -149,11 +215,24 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handleReassignLecturer = (courseId: string) => {
+  const handleReassignLecturer = async (courseId: string) => {
     if (!editLecturerId) {
       toast.error('Please select a lecturer');
       return;
     }
+
+    const isOnline = await checkServerHealth();
+    if (isOnline) {
+      const apiRes = await updateCourseApi(courseId, { lecturerId: editLecturerId });
+      if (apiRes.success) {
+        toast.success('Lecturer reassigned!');
+        setEditingCourseId(null);
+        setEditLecturerId('');
+        refreshData();
+        return;
+      }
+    }
+
     const result = updateCourse(courseId, { lecturerId: editLecturerId });
     if (result.success) {
       toast.success('Lecturer reassigned!');
@@ -165,8 +244,18 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handleResetDevice = (studentId: string, studentName: string) => {
+  const handleResetDevice = async (studentId: string, studentName: string) => {
     if (window.confirm(`Reset device binding for ${studentName}? This will allow the student to sign in and mark attendance on a new phone/device.`)) {
+      const isOnline = await checkServerHealth();
+      if (isOnline) {
+        const apiRes = await resetDeviceBindingApi(studentId);
+        if (apiRes.success) {
+          toast.success(`Device binding reset for ${studentName}! They can now log in on a new device.`);
+          refreshData();
+          return;
+        }
+      }
+
       const result = resetDeviceBinding(studentId);
       if (result.success) {
         toast.success(`Device binding reset for ${studentName}! They can now log in on a new device.`);
@@ -177,8 +266,18 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handleDeleteUser = (userId: string, userName: string, role: string) => {
+  const handleDeleteUser = async (userId: string, userName: string, role: string) => {
     if (window.confirm(`Delete ${role} "${userName}"? This action cannot be undone and will remove all their associated data.`)) {
+      const isOnline = await checkServerHealth();
+      if (isOnline) {
+        const apiRes = await deleteUserApi(userId);
+        if (apiRes.success) {
+          toast.success(`${role === 'student' ? 'Student' : 'Lecturer'} "${userName}" deleted successfully`);
+          refreshData();
+          return;
+        }
+      }
+
       const result = deleteUser(userId);
       if (result.success) {
         toast.success(`${role === 'student' ? 'Student' : 'Lecturer'} "${userName}" deleted successfully`);
@@ -198,7 +297,7 @@ export const AdminDashboard: React.FC = () => {
     setEditUserLevel(user.level || '');
   };
 
-  const handleSaveUser = (userId: string) => {
+  const handleSaveUser = async (userId: string) => {
     const updates: any = {
       name: editUserName,
       email: editUserEmail,
@@ -209,6 +308,18 @@ export const AdminDashboard: React.FC = () => {
       updates.programme = editUserProgramme;
       updates.level = editUserLevel;
     }
+
+    const isOnline = await checkServerHealth();
+    if (isOnline) {
+      const apiRes = await adminUpdateUserApi(userId, updates);
+      if (apiRes.success) {
+        toast.success('User updated successfully');
+        setEditingUserId(null);
+        refreshData();
+        return;
+      }
+    }
+
     const result = adminUpdateUser(userId, updates);
     if (result.success) {
       toast.success('User updated successfully');
@@ -219,11 +330,34 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handleAddLecturer = () => {
+  const handleAddLecturer = async () => {
     if (!newLecturerName.trim() || !newLecturerEmail.trim()) {
       toast.error('Please fill in all fields');
       return;
     }
+
+    const isOnline = await checkServerHealth();
+    if (isOnline) {
+      const apiRes = await registerUserApi(
+        newLecturerName.trim(),
+        newLecturerEmail.trim().toLowerCase(),
+        newLecturerPassword,
+        'lecturer'
+      );
+      if (apiRes.success) {
+        toast.success('Lecturer added successfully!');
+        setShowAddLecturer(false);
+        setNewLecturerName('');
+        setNewLecturerEmail('');
+        setNewLecturerPassword('lecturer123');
+        refreshData();
+        return;
+      } else {
+        toast.error(apiRes.error || 'Failed to add lecturer');
+        return;
+      }
+    }
+
     const result = registerUser(
       newLecturerName.trim(),
       newLecturerEmail.trim().toLowerCase(),
