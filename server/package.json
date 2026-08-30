@@ -1,6 +1,7 @@
 {
   "name": "smartattend-server",
   "version": "1.0.0",
+  "type": "module",
   "description": "Production Backend API for SmartAttend Attendance Management System",
   "main": "dist/index.js",
   "scripts": {
