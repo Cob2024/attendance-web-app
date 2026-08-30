@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "dev": "vite"
+    "dev:frontend": "vite --host",
+    "dev:server": "cd server && npm run dev",
+    "dev": "concurrently -n \"frontend,server\" -c \"blue,green\" \"npm run dev:frontend\" \"npm run dev:server\""
   },
   "dependencies": {
     "@emotion/react": "11.14.0",
@@ -74,6 +76,7 @@
     "@types/react": "^18.3.28",
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "4.7.0",
+    "concurrently": "^10.0.5",
     "tailwindcss": "4.1.12",
     "vite": "^6.4.1"
   }
