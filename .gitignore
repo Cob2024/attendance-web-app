@@ -26,4 +26,8 @@ server/node_modules/
 server/prisma/*.db
 server/prisma/*.db-journal
 server/dump.js
+server/backups/
+*.tsbuildinfo
+
+
 
