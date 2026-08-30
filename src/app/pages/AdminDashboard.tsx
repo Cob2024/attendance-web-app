@@ -23,6 +23,7 @@ import {
   unenrollStudent,
   autoEnrollStudents,
   getCourseStudents,
+  getCourseAttendance,
   exportAllAttendanceCSV
 } from '../services/mockData';
 import {
@@ -472,12 +473,12 @@ export const AdminDashboard: React.FC = () => {
                 <div className="p-4 lg:p-6">
                   {(() => {
                     const allRiskStudents: any[] = [];
-                    courses.forEach(c => {
+                    courses.forEach((c: any) => {
                       const allRecs = getCourseAttendance(c.id);
                       const totalSessions = new Set(allRecs.map((a: any) => a.date)).size;
                       if (totalSessions === 0) return;
                       const enrolled = getCourseStudents(c.id);
-                      enrolled.forEach(s => {
+                      enrolled.forEach((s: any) => {
                         const attended = allRecs.filter((r: any) => r.studentId === s.id && r.status === 'present').length;
                         const pct = Math.round((attended / totalSessions) * 100);
                         if (pct < 75) {
