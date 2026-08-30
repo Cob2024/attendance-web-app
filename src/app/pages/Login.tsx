@@ -133,7 +133,7 @@ export const Login: React.FC = () => {
           {/* Background Campus Image with Overlay */}
           <div className="absolute inset-0 z-0">
             <img
-              src="/assets/ttu-campus-hero.png"
+              src="/assets/ttu-campus-hero.jpg"
               alt="Takoradi Technical University Campus"
               className="w-full h-full object-cover object-center transform scale-105"
             />

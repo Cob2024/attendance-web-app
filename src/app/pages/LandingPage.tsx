@@ -116,7 +116,7 @@ export const LandingPage: React.FC = () => {
           <div className="pt-10 max-w-5xl mx-auto relative">
             <div className="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-white dark:border-slate-800">
               <img
-                src="/assets/ttu-campus-hero.png"
+                src="/assets/ttu-campus-hero.jpg"
                 alt="Takoradi Technical University Campus"
                 className="w-full max-h-[460px] object-cover object-center"
               />
