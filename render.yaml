@@ -16,7 +16,7 @@ services:
       - key: CLIENT_ORIGIN
         value: 'https://attendance-web-app-lac.vercel.app'
       - key: DATABASE_URL
-        value: file:./dev.db
+        sync: false  # Configure in Render Dashboard with your Supabase PostgreSQL URI
       - key: ADMIN_PASSWORD
         value: admin123
 
