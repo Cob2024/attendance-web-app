@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLocation, useNavigate } from 'react-router';
+import { useSocket } from '../hooks/useSocket';
 import { Sidebar } from '../components/Sidebar';
 import {
   getLecturerCourses,
@@ -38,7 +39,9 @@ import {
   FileSpreadsheet,
   History,
   ToggleLeft,
-  ToggleRight
+  ToggleRight,
+  AlertTriangle,
+  Zap
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '../components/ui/chart';
@@ -69,6 +72,9 @@ export const LecturerDashboard: React.FC = () => {
   const [sessionHistory, setSessionHistory] = useState<any[]>([]);
   const [sessionDuration, setSessionDuration] = useState(30);
   const [countdown, setCountdown] = useState<string | null>(null);
+  const [liveFeed, setLiveFeed] = useState<any[]>([]);
+  const [atRiskStudents, setAtRiskStudents] = useState<any[]>([]);
+  const { joinCourse, leaveCourse, on, off } = useSocket();
 
   useEffect(() => {
     if (user) {
@@ -97,6 +103,32 @@ export const LecturerDashboard: React.FC = () => {
       setActiveCode(code);
     }
   }, [selectedCourse, startDate, endDate]);
+
+  // Socket.io: Join/leave course rooms for real-time events
+  useEffect(() => {
+    if (!selectedCourse) return;
+    joinCourse(selectedCourse.id);
+    return () => {
+      leaveCourse(selectedCourse.id);
+    };
+  }, [selectedCourse, joinCourse, leaveCourse]);
+
+  // Socket.io: Listen for real-time attendance events
+  const handleAttendanceMarked = useCallback((data: any) => {
+    setLiveFeed(prev => [data, ...prev].slice(0, 20));
+    setSessionStudentCount(prev => prev + 1);
+    toast.success(`${data.studentName} checked in (${data.distance}m away)`, {
+      icon: '⚡',
+      duration: 3000,
+    });
+  }, []);
+
+  useEffect(() => {
+    on('attendance:marked', handleAttendanceMarked);
+    return () => {
+      off('attendance:marked', handleAttendanceMarked);
+    };
+  }, [on, off, handleAttendanceMarked]);
 
   // Auto-refresh student count for active session
   useEffect(() => {
@@ -707,7 +739,38 @@ export const LecturerDashboard: React.FC = () => {
             </div>
           )}
 
-
+          {/* ⚡ Real-Time Live Feed — shown when session is active */}
+          {activeCode && liveFeed.length > 0 && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 lg:mb-8 overflow-hidden">
+              <div className="px-4 lg:px-6 py-4 border-b border-gray-200 flex items-center gap-2">
+                <Zap className="w-5 h-5 text-amber-500" />
+                <h2 className="text-lg font-semibold text-gray-900">Live Attendance Feed</h2>
+                <span className="ml-auto text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium animate-pulse">
+                  Real-time
+                </span>
+              </div>
+              <div className="divide-y divide-gray-100 max-h-[280px] overflow-y-auto">
+                {liveFeed.map((entry, idx) => (
+                  <div
+                    key={`${entry.timestamp}-${idx}`}
+                    className="px-4 lg:px-6 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors animate-[slideIn_0.3s_ease-out]"
+                    style={{ animationDelay: `${idx * 50}ms` }}
+                  >
+                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <UserCheck className="w-4 h-4 text-green-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{entry.studentName}</p>
+                      <p className="text-xs text-gray-500">{entry.studentIdNumber} • {entry.distance}m away</p>
+                    </div>
+                    <span className="text-xs text-gray-400 flex-shrink-0">
+                      {new Date(entry.timestamp).toLocaleTimeString()}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Attendance Chart — always visible */}
           {selectedCourse && (

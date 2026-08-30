@@ -227,6 +227,37 @@ export const StudentDashboard: React.FC = () => {
             </p>
           </div>
 
+          {/* Low Attendance / Exam Eligibility Warning Banner */}
+          {(() => {
+            const atRisk = courses.filter(c => {
+              const allRecs = getCourseAttendance(c.id);
+              const total = new Set(allRecs.map((a: any) => a.date)).size;
+              if (total === 0) return false;
+              const attended = attendanceHistory.filter(a => a.courseId === c.id && a.status === 'present').length;
+              return Math.round((attended / total) * 100) < 75;
+            });
+
+            if (atRisk.length === 0) return null;
+
+            return (
+              <div className="mb-6 bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-amber-500/5 border-l-4 border-amber-500 rounded-xl p-4 sm:p-5 shadow-sm">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-amber-500/20 rounded-lg text-amber-700 dark:text-amber-300 flex-shrink-0">
+                    <AlertCircle className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-bold text-amber-900 dark:text-amber-200">
+                      Attendance Notice: 75% Exam Eligibility Threshold
+                    </h3>
+                    <p className="text-xs sm:text-sm text-amber-800/90 dark:text-amber-300/80 mt-1">
+                      You are currently below the required 75% threshold in <span className="font-semibold">{atRisk.map(c => c.courseCode).join(', ')}</span>. Under university regulations, minimum 75% attendance is required to sit for end-of-semester examinations.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Active Sessions Banner */}
           {!isCoursesView && activeSessions.length > 0 && (
             <div className="mb-6 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl shadow-lg p-4 text-white">

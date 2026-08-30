@@ -455,6 +455,101 @@ export const AdminDashboard: React.FC = () => {
                 </button>
               </div>
 
+              {/* Attendance Risk & Compliance Overview (75% Threshold) */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-8">
+                <div className="px-4 lg:px-6 py-4 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5 text-amber-500" />
+                    <div>
+                      <h2 className="text-lg font-semibold text-gray-900">Attendance Risk & Compliance</h2>
+                      <p className="text-xs text-gray-500">Monitoring students below the 75% examination eligibility threshold</p>
+                    </div>
+                  </div>
+                  <span className="text-xs font-semibold px-2.5 py-1 bg-amber-100 text-amber-800 rounded-full self-start sm:self-auto">
+                    Threshold: 75%
+                  </span>
+                </div>
+                <div className="p-4 lg:p-6">
+                  {(() => {
+                    const allRiskStudents: any[] = [];
+                    courses.forEach(c => {
+                      const allRecs = getCourseAttendance(c.id);
+                      const totalSessions = new Set(allRecs.map((a: any) => a.date)).size;
+                      if (totalSessions === 0) return;
+                      const enrolled = getCourseStudents(c.id);
+                      enrolled.forEach(s => {
+                        const attended = allRecs.filter((r: any) => r.studentId === s.id && r.status === 'present').length;
+                        const pct = Math.round((attended / totalSessions) * 100);
+                        if (pct < 75) {
+                          allRiskStudents.push({
+                            student: s,
+                            course: c,
+                            attended,
+                            totalSessions,
+                            pct
+                          });
+                        }
+                      });
+                    });
+
+                    if (allRiskStudents.length === 0) {
+                      return (
+                        <div className="text-center py-6 text-emerald-600 font-medium text-sm flex items-center justify-center gap-2">
+                          <CheckCircle className="w-5 h-5" />
+                          All enrolled students currently meet or exceed the 75% attendance threshold!
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+                          <div className="bg-amber-50 dark:bg-amber-950/40 rounded-lg p-3 border border-amber-200 dark:border-amber-800">
+                            <p className="text-xs text-amber-700 dark:text-amber-300">Total At-Risk Records</p>
+                            <p className="text-xl font-bold text-amber-900 dark:text-amber-100">{allRiskStudents.length}</p>
+                          </div>
+                          <div className="bg-red-50 dark:bg-red-950/40 rounded-lg p-3 border border-red-200 dark:border-red-800">
+                            <p className="text-xs text-red-700 dark:text-red-300">Critical (&lt; 50%)</p>
+                            <p className="text-xl font-bold text-red-900 dark:text-red-100">{allRiskStudents.filter(r => r.pct < 50).length}</p>
+                          </div>
+                          <div className="bg-blue-50 dark:bg-blue-950/40 rounded-lg p-3 border border-blue-200 dark:border-blue-800">
+                            <p className="text-xs text-blue-700 dark:text-blue-300">Affected Courses</p>
+                            <p className="text-xl font-bold text-blue-900 dark:text-blue-100">{new Set(allRiskStudents.map(r => r.course.id)).size}</p>
+                          </div>
+                        </div>
+
+                        <div className="overflow-x-auto max-h-[300px]">
+                          <table className="w-full text-left text-sm">
+                            <thead className="bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600 uppercase">
+                              <tr>
+                                <th className="px-3 py-2">Student</th>
+                                <th className="px-3 py-2">Course</th>
+                                <th className="px-3 py-2">Attendance</th>
+                                <th className="px-3 py-2">Status</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                              {allRiskStudents.slice(0, 10).map((r, i) => (
+                                <tr key={i} className="hover:bg-gray-50">
+                                  <td className="px-3 py-2 font-medium text-gray-900">{r.student.name} ({r.student.studentId || 'ID N/A'})</td>
+                                  <td className="px-3 py-2 text-gray-600">{r.course.courseCode}</td>
+                                  <td className="px-3 py-2">{r.attended}/{r.totalSessions} ({r.pct}%)</td>
+                                  <td className="px-3 py-2">
+                                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${r.pct < 50 ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                                      {r.pct < 50 ? 'Critical' : 'Warning'}
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+
               {/* Courses by Programme */}
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 <div className="px-4 lg:px-6 py-4 border-b border-gray-200">

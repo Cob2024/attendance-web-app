@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { prisma } from '../db.js';
 import { calculateDistanceMeters } from '../utils/haversine.js';
 import { authenticateToken, requireRole, AuthRequest } from '../middleware/auth.js';
+import { getIO } from '../socket.js';
 
 export const attendanceRouter = Router();
 
@@ -55,6 +56,15 @@ attendanceRouter.post('/session/start', authenticateToken, requireRole(['lecture
       },
     });
 
+    // Emit real-time event: session started
+    getIO().to(`course:${courseId}`).emit('session:started', {
+      sessionId: session.id,
+      courseId,
+      otpCode,
+      expiresAt: session.expiresAt,
+      lecturerName: req.user!.name,
+    });
+
     return res.json({ success: true, session, otpCode });
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err.message });
@@ -70,6 +80,9 @@ attendanceRouter.post('/session/end', authenticateToken, requireRole(['lecturer'
       where: { courseId, isActive: true },
       data: { isActive: false, endedAt: new Date() },
     });
+
+    // Emit real-time event: session ended
+    getIO().to(`course:${courseId}`).emit('session:ended', { courseId });
 
     return res.json({ success: true });
   } catch (err: any) {
@@ -169,6 +182,19 @@ attendanceRouter.post('/mark', authenticateToken, requireRole(['student']), asyn
         longitude: parseFloat(longitude),
         distance,
       },
+    });
+
+    // Emit real-time event: attendance marked
+    const studentInfo = await prisma.user.findUnique({
+      where: { id: studentId },
+      select: { name: true, studentId: true },
+    });
+    getIO().to(`course:${courseId}`).emit('attendance:marked', {
+      courseId,
+      studentName: studentInfo?.name || 'Unknown',
+      studentIdNumber: studentInfo?.studentId || '',
+      distance: Math.round(distance),
+      timestamp: new Date().toISOString(),
     });
 
     return res.json({ success: true, record, distance });

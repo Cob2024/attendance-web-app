@@ -334,3 +334,35 @@ export const autoEnrollApi = async (courseId: string) => {
     return { success: false, error: err.message };
   }
 };
+
+// ------------------------------------------------------------
+// Notification / Warning API
+// ------------------------------------------------------------
+
+export const getAttendanceWarningsApi = async (courseId: string, threshold: number = 75) => {
+  try {
+    const data = await apiFetch(`/notifications/attendance-warnings/${courseId}?threshold=${threshold}`);
+    return data;
+  } catch (err: any) {
+    return { success: false, warnings: [], error: err.message };
+  }
+};
+
+export const getStudentWarningsApi = async (studentId: string, threshold: number = 75) => {
+  try {
+    const data = await apiFetch(`/notifications/student-warnings/${studentId}?threshold=${threshold}`);
+    return data;
+  } catch (err: any) {
+    return { success: false, warnings: [], error: err.message };
+  }
+};
+
+export const getSystemRiskReportApi = async (threshold: number = 75) => {
+  try {
+    const data = await apiFetch(`/notifications/system-risk-report?threshold=${threshold}`);
+    return data;
+  } catch (err: any) {
+    return { success: false, report: [], error: err.message };
+  }
+};
+

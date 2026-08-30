@@ -1,18 +1,53 @@
 import express from 'express';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
+import { setIO } from './socket.js';
 import { authRouter } from './routes/authRoutes.js';
 import { courseRouter } from './routes/courseRoutes.js';
 import { attendanceRouter } from './routes/attendanceRoutes.js';
 import { adminRouter } from './routes/adminRoutes.js';
 import { enrollmentRouter } from './routes/enrollmentRoutes.js';
+import { notificationRouter } from './routes/notificationRoutes.js';
 
 dotenv.config();
 
 const app = express();
+const httpServer = createServer(app);
 const PORT = process.env.PORT || 5000;
+
+// Socket.io — Real-Time Event Server
+const corsOrigin = process.env.CLIENT_ORIGIN || '*';
+const io = new Server(httpServer, {
+  cors: {
+    origin: corsOrigin,
+    methods: ['GET', 'POST'],
+    credentials: true,
+  },
+});
+
+// Register the io instance in the shared singleton
+setIO(io);
+
+io.on('connection', (socket) => {
+  console.log(`⚡ Client connected: ${socket.id}`);
+
+  // Allow clients to join course-specific rooms for targeted events
+  socket.on('join:course', (courseId: string) => {
+    socket.join(`course:${courseId}`);
+  });
+
+  socket.on('leave:course', (courseId: string) => {
+    socket.leave(`course:${courseId}`);
+  });
+
+  socket.on('disconnect', () => {
+    console.log(`🔌 Client disconnected: ${socket.id}`);
+  });
+});
 
 // Security Middleware: Helmet HTTP Headers
 app.use(helmet());
@@ -36,7 +71,7 @@ const authLimiter = rateLimit({
 
 // CORS Configuration
 app.use(cors({
-  origin: process.env.CLIENT_ORIGIN || '*',
+  origin: corsOrigin,
   credentials: true,
 }));
 
@@ -58,7 +93,9 @@ app.use('/api/courses', courseRouter);
 app.use('/api/attendance', attendanceRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/enrollments', enrollmentRouter);
+app.use('/api/notifications', notificationRouter);
 
-app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
   console.log(`🚀 SmartAttend Security-Hardened Production Server running on port ${PORT}`);
+  console.log(`⚡ Socket.io real-time server attached`);
 });
