@@ -20,6 +20,7 @@ export interface User {
 interface AuthContextType {
   user: User | null;
   deviceFingerprint: string | null;
+  isInitializing: boolean;
   login: (email: string, password: string, role: UserRole) => Promise<{ success: boolean; error?: string }>;
   signup: (
     name: string,
@@ -38,18 +39,25 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(() => {
+    try {
+      const stored = localStorage.getItem('currentUser');
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
   const [deviceFingerprint, setDeviceFingerprint] = useState<string | null>(null);
+  const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
-    // Check for existing session
-    const storedUser = localStorage.getItem('currentUser');
-    if (storedUser) {
-      const parsed = JSON.parse(storedUser);
-      setUser(parsed);
-      // Generate fingerprint for existing session
+    try {
       const fp = generateDeviceFingerprint();
       setDeviceFingerprint(fp);
+    } catch (e) {
+      console.warn('Fingerprint error:', e);
+    } finally {
+      setIsInitializing(false);
     }
   }, []);
 
