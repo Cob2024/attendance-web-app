@@ -124,12 +124,12 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-3 sm:p-4 lg:p-6">
-      {/* Two-Sided Container */}
-      <div className="w-full max-w-5xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col lg:flex-row min-h-[500px] max-h-[90vh] border border-gray-200/80">
+    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-gray-100 to-slate-200 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex items-center justify-center p-0 sm:p-4 lg:p-6">
+      {/* Main Container — Full width/height on mobile, card on desktop */}
+      <div className="w-full sm:max-w-5xl bg-white dark:bg-slate-900 min-h-screen sm:min-h-0 sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col lg:flex-row border-0 sm:border border-gray-200/80 dark:border-slate-800">
 
         {/* ===== LEFT SIDE: Campus Hero Image Container (Visible on lg+) ===== */}
-        <div className="lg:w-1/2 relative bg-ttu-navy min-h-[250px] lg:min-h-full flex flex-col justify-between p-6 lg:p-8 overflow-hidden">
+        <div className="hidden lg:flex lg:w-1/2 relative bg-ttu-navy min-h-full flex-col justify-between p-8 xl:p-10 overflow-hidden">
           {/* Background Campus Image with Overlay */}
           <div className="absolute inset-0 z-0">
             <img
@@ -143,35 +143,35 @@ export const Login: React.FC = () => {
 
           {/* Top Brand Header */}
           <div className="relative z-10 flex items-center gap-3.5">
-            <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center p-2 shadow-lg flex-shrink-0">
+            <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center p-2 shadow-lg flex-shrink-0">
               <img src="/assets/ttu-logo.png" alt="TTU Logo" className="w-full h-full object-contain" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white leading-tight">Takoradi Technical University</h2>
-              <p className="text-xs text-ttu-gold font-semibold uppercase tracking-widest">SmartAttend Portal</p>
+              <h2 className="text-lg font-bold text-white leading-tight">Takoradi Technical University</h2>
+              <p className="text-[11px] text-ttu-gold font-semibold uppercase tracking-widest">SmartAttend Portal</p>
             </div>
           </div>
 
           {/* Hero Content & Feature Highlights */}
-          <div className="relative z-10 my-8 lg:my-auto text-white space-y-6">
+          <div className="relative z-10 my-auto text-white space-y-6 py-8">
             <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/15 text-xs font-semibold text-ttu-gold">
               <ShieldCheck className="w-4 h-4 text-ttu-gold" />
               <span>Location & Hardware Verified Attendance</span>
             </div>
 
-            <h1 className="text-3xl lg:text-4xl font-extrabold text-white leading-tight">
+            <h1 className="text-3xl xl:text-4xl font-extrabold text-white leading-tight">
               Streamlined GPS & Mobile Attendance System
             </h1>
 
             <p className="text-sm text-white/80 leading-relaxed max-w-lg">
-              Welcome to the official attendance management platform. Ensure accurate session tracking with geofenced location verification and hardware device locking.
+              Official attendance management platform. Ensure accurate session tracking with geofenced location verification and hardware device locking.
             </p>
 
             {/* Feature List Badges */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+            <div className="grid grid-cols-2 gap-3 pt-2">
               <div className="flex items-center gap-2.5 bg-white/10 backdrop-blur-sm p-3 rounded-xl border border-white/10">
                 <MapPin className="w-5 h-5 text-emerald-400 flex-shrink-0" />
-                <span className="text-xs font-medium text-white/90">50m Radius GPS Geofence</span>
+                <span className="text-xs font-medium text-white/90">50m Radius Geofence</span>
               </div>
               <div className="flex items-center gap-2.5 bg-white/10 backdrop-blur-sm p-3 rounded-xl border border-white/10">
                 <Smartphone className="w-5 h-5 text-purple-300 flex-shrink-0" />
@@ -197,89 +197,118 @@ export const Login: React.FC = () => {
         </div>
 
         {/* ===== RIGHT SIDE: Login / Signup Form Container ===== */}
-        <div className="lg:w-1/2 p-6 sm:p-8 lg:p-8 flex flex-col justify-center bg-white overflow-y-auto max-h-[85vh] lg:max-h-full">
+        <div className="w-full lg:w-1/2 p-5 sm:p-8 lg:p-10 flex flex-col justify-center bg-white dark:bg-slate-900">
           <div className="max-w-md w-full mx-auto">
 
-            {/* Mobile Header Logo (visible on mobile only) */}
-            <div className="lg:hidden text-center mb-6">
-              <div className="inline-flex items-center justify-center w-28 h-28 mb-2 p-2 bg-white rounded-2xl shadow-md border border-gray-200">
-                <img src="/assets/ttu-logo.png" alt="Takoradi Technical University Logo" className="w-full h-full object-contain" />
+            {/* Mobile Header Banner (Compact & Elegant on Mobile) */}
+            <div className="lg:hidden flex items-center gap-3.5 mb-5 pb-4 border-b border-gray-100 dark:border-slate-800">
+              <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center p-1.5 shadow-sm border border-gray-200 dark:border-slate-700 flex-shrink-0">
+                <img src="/assets/ttu-logo.png" alt="TTU Logo" className="w-full h-full object-contain" />
               </div>
-              <h2 className="text-2xl font-bold text-gray-900">SmartAttend</h2>
-              <p className="text-xs text-gray-500">Takoradi Technical University</p>
+              <div className="min-w-0">
+                <h2 className="text-base font-bold text-gray-900 dark:text-white leading-tight truncate">SmartAttend Portal</h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Takoradi Technical University</p>
+              </div>
             </div>
 
-            <div className="mb-6">
-              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
-                {isSignup ? 'Create Account' : 'Welcome Back'}
+            {/* Segmented Tab Switcher (Sign In vs Register) */}
+            <div className="flex bg-gray-100 dark:bg-slate-800 p-1 rounded-2xl mb-5">
+              <button
+                type="button"
+                onClick={() => { if (isSignup) toggleMode(); }}
+                className={`flex-1 py-2 text-xs sm:text-sm font-semibold rounded-xl transition-all cursor-pointer ${
+                  !isSignup
+                    ? 'bg-white dark:bg-slate-900 text-ttu-navy dark:text-amber-400 shadow-xs'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'
+                }`}
+              >
+                Sign In
+              </button>
+              <button
+                type="button"
+                onClick={() => { if (!isSignup) toggleMode(); }}
+                className={`flex-1 py-2 text-xs sm:text-sm font-semibold rounded-xl transition-all cursor-pointer ${
+                  isSignup
+                    ? 'bg-white dark:bg-slate-900 text-ttu-navy dark:text-amber-400 shadow-xs'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'
+                }`}
+              >
+                Create Account
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                {isSignup ? 'Create Your Account' : 'Welcome Back'}
               </h2>
-              <p className="text-sm text-gray-500 mt-1">
-                {isSignup ? 'Fill in your details to register on SmartAttend' : 'Sign in to access your attendance portal'}
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                {isSignup ? 'Register to start tracking attendance' : 'Sign in to access your dashboard'}
               </p>
             </div>
 
             {/* Error Message */}
             {error && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2.5 text-red-700 text-sm">
-                <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                <p>{error}</p>
+              <div className="mb-4 p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-xl flex items-center gap-2.5 text-red-700 dark:text-red-300 text-xs sm:text-sm">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <p className="leading-snug">{error}</p>
               </div>
             )}
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-3.5 sm:space-y-4">
               {/* Role Selection Cards */}
               <div>
-                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2">
+                <label className="block text-[11px] sm:text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1.5">
                   Select Role <span className="text-red-500">*</span>
                 </label>
-                <div className="grid grid-cols-3 gap-2.5">
+                <div className="grid grid-cols-3 gap-2">
                   <button
                     type="button"
                     onClick={() => setRole(role === 'student' ? '' : 'student')}
-                    className={`flex flex-col items-center justify-center gap-1.5 p-3 rounded-xl border-2 transition-all cursor-pointer ${
+                    className={`flex flex-col items-center justify-center gap-1 p-2.5 sm:p-3 rounded-xl border-2 transition-all cursor-pointer ${
                       role === 'student'
-                        ? 'border-ttu-navy bg-ttu-navy-50 text-ttu-navy font-semibold shadow-sm'
-                        : 'border-gray-200 hover:border-gray-300 text-gray-600'
+                        ? 'border-ttu-navy bg-ttu-navy-50 text-ttu-navy dark:bg-ttu-navy/30 dark:border-ttu-gold dark:text-ttu-gold font-semibold shadow-xs'
+                        : 'border-gray-200 dark:border-slate-800 hover:border-gray-300 text-gray-600 dark:text-gray-400'
                     }`}
                   >
-                    <GraduationCap className={`w-5 h-5 ${role === 'student' ? 'text-ttu-navy' : 'text-gray-400'}`} />
+                    <GraduationCap className={`w-4 h-4 sm:w-5 sm:h-5 ${role === 'student' ? 'text-ttu-navy dark:text-ttu-gold' : 'text-gray-400'}`} />
                     <span className="text-xs">Student</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setRole(role === 'lecturer' ? '' : 'lecturer')}
-                    className={`flex flex-col items-center justify-center gap-1.5 p-3 rounded-xl border-2 transition-all cursor-pointer ${
+                    className={`flex flex-col items-center justify-center gap-1 p-2.5 sm:p-3 rounded-xl border-2 transition-all cursor-pointer ${
                       role === 'lecturer'
-                        ? 'border-ttu-navy bg-ttu-navy-50 text-ttu-navy font-semibold shadow-sm'
-                        : 'border-gray-200 hover:border-gray-300 text-gray-600'
+                        ? 'border-ttu-navy bg-ttu-navy-50 text-ttu-navy dark:bg-ttu-navy/30 dark:border-ttu-gold dark:text-ttu-gold font-semibold shadow-xs'
+                        : 'border-gray-200 dark:border-slate-800 hover:border-gray-300 text-gray-600 dark:text-gray-400'
                     }`}
                   >
-                    <UserCheck className={`w-5 h-5 ${role === 'lecturer' ? 'text-ttu-navy' : 'text-gray-400'}`} />
+                    <UserCheck className={`w-4 h-4 sm:w-5 sm:h-5 ${role === 'lecturer' ? 'text-ttu-navy dark:text-ttu-gold' : 'text-gray-400'}`} />
                     <span className="text-xs">Lecturer</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setRole(role === 'admin' ? '' : 'admin')}
-                    className={`flex flex-col items-center justify-center gap-1.5 p-3 rounded-xl border-2 transition-all cursor-pointer ${
+                    className={`flex flex-col items-center justify-center gap-1 p-2.5 sm:p-3 rounded-xl border-2 transition-all cursor-pointer ${
                       role === 'admin'
-                        ? 'border-ttu-navy bg-ttu-navy-50 text-ttu-navy font-semibold shadow-sm'
-                        : 'border-gray-200 hover:border-gray-300 text-gray-600'
+                        ? 'border-ttu-navy bg-ttu-navy-50 text-ttu-navy dark:bg-ttu-navy/30 dark:border-ttu-gold dark:text-ttu-gold font-semibold shadow-xs'
+                        : 'border-gray-200 dark:border-slate-800 hover:border-gray-300 text-gray-600 dark:text-gray-400'
                     }`}
                   >
-                    <ShieldCheck className={`w-5 h-5 ${role === 'admin' ? 'text-ttu-navy' : 'text-gray-400'}`} />
+                    <ShieldCheck className={`w-4 h-4 sm:w-5 sm:h-5 ${role === 'admin' ? 'text-ttu-navy dark:text-ttu-gold' : 'text-gray-400'}`} />
                     <span className="text-xs">Admin</span>
                   </button>
                 </div>
               </div>
 
+              {/* Default Administrator Quick Access */}
               {!isSignup && (
-                <div className="bg-amber-50/80 dark:bg-amber-950/40 rounded-xl p-3 border border-amber-200 dark:border-amber-800 text-xs">
+                <div className="bg-amber-50/80 dark:bg-amber-950/40 rounded-xl p-2.5 sm:p-3 border border-amber-200 dark:border-amber-800 text-xs">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-1.5 min-w-0">
-                      <span className="font-semibold text-amber-900 dark:text-amber-200">Default Admin:</span>
+                      <span className="font-semibold text-amber-900 dark:text-amber-200 text-[11px] sm:text-xs">Default Admin:</span>
                       <span className="text-amber-800 dark:text-amber-300 font-mono text-[11px] truncate">admin@ttu.edu.gh</span>
                     </div>
                     <button
@@ -302,7 +331,7 @@ export const Login: React.FC = () => {
               {/* Full Name (signup only) */}
               {isSignup && (
                 <div>
-                  <label htmlFor="name" className="block text-xs font-medium text-gray-700 mb-1">
+                  <label htmlFor="name" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Full Name <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
@@ -312,7 +341,7 @@ export const Login: React.FC = () => {
                       type="text"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-ttu-navy focus:border-transparent text-sm"
+                      className="w-full pl-9 pr-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-ttu-navy focus:border-transparent text-sm dark:text-white"
                       placeholder="e.g. Arhinful Emmanuel Kwabena"
                       required
                     />
@@ -322,7 +351,7 @@ export const Login: React.FC = () => {
 
               {/* Email Address */}
               <div>
-                <label htmlFor="email" className="block text-xs font-medium text-gray-700 mb-1">
+                <label htmlFor="email" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Email Address <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
@@ -332,8 +361,8 @@ export const Login: React.FC = () => {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-ttu-navy focus:border-transparent text-sm"
-                    placeholder={role === 'lecturer' ? 'lecturer@ttu.edu.gh' : 'student@ttu.edu.gh'}
+                    className="w-full pl-9 pr-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-ttu-navy focus:border-transparent text-sm dark:text-white"
+                    placeholder={role === 'lecturer' ? 'lecturer@ttu.edu.gh' : role === 'admin' ? 'admin@ttu.edu.gh' : 'student@ttu.edu.gh'}
                     required
                   />
                 </div>
@@ -341,7 +370,7 @@ export const Login: React.FC = () => {
 
               {/* Password */}
               <div>
-                <label htmlFor="password" className="block text-xs font-medium text-gray-700 mb-1">
+                <label htmlFor="password" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Password <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
@@ -351,7 +380,7 @@ export const Login: React.FC = () => {
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-9 pr-10 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-ttu-navy focus:border-transparent text-sm"
+                    className="w-full pl-9 pr-10 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-ttu-navy focus:border-transparent text-sm dark:text-white"
                     placeholder="••••••••"
                     required
                   />
@@ -369,7 +398,7 @@ export const Login: React.FC = () => {
               {/* Confirm Password (signup only) */}
               {isSignup && (
                 <div>
-                  <label htmlFor="confirmPassword" className="block text-xs font-medium text-gray-700 mb-1">
+                  <label htmlFor="confirmPassword" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Confirm Password <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
@@ -379,7 +408,7 @@ export const Login: React.FC = () => {
                       type={showConfirmPassword ? 'text' : 'password'}
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="w-full pl-9 pr-10 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-ttu-navy focus:border-transparent text-sm"
+                      className="w-full pl-9 pr-10 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-ttu-navy focus:border-transparent text-sm dark:text-white"
                       placeholder="••••••••"
                       required
                     />
@@ -397,9 +426,9 @@ export const Login: React.FC = () => {
 
               {/* Student Extra Details (signup only) */}
               {isSignup && role === 'student' && (
-                <div className="space-y-3 pt-1 border-t border-gray-100">
+                <div className="space-y-3 pt-2 border-t border-gray-100 dark:border-slate-800">
                   <div>
-                    <label htmlFor="studentId" className="block text-xs font-medium text-gray-700 mb-1">
+                    <label htmlFor="studentId" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Student ID Number <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
@@ -409,7 +438,7 @@ export const Login: React.FC = () => {
                         type="text"
                         value={studentId}
                         onChange={(e) => setStudentId(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-ttu-navy focus:border-transparent text-sm"
+                        className="w-full pl-9 pr-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-ttu-navy focus:border-transparent text-sm dark:text-white"
                         placeholder="e.g. BC/GRD/22/118"
                         required
                       />
@@ -417,7 +446,7 @@ export const Login: React.FC = () => {
                   </div>
 
                   <div>
-                    <label htmlFor="course" className="block text-xs font-medium text-gray-700 mb-1">
+                    <label htmlFor="course" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Programme <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
@@ -427,7 +456,7 @@ export const Login: React.FC = () => {
                         type="text"
                         value={programme}
                         onChange={(e) => setProgramme(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-ttu-navy focus:border-transparent text-sm"
+                        className="w-full pl-9 pr-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-ttu-navy focus:border-transparent text-sm dark:text-white"
                         placeholder="e.g. Graphic Design"
                         required
                       />
@@ -435,7 +464,7 @@ export const Login: React.FC = () => {
                   </div>
 
                   <div>
-                    <label htmlFor="level" className="block text-xs font-medium text-gray-700 mb-1">
+                    <label htmlFor="level" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Level <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
@@ -444,7 +473,7 @@ export const Login: React.FC = () => {
                         id="level"
                         value={level}
                         onChange={(e) => setLevel(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-ttu-navy focus:border-transparent text-sm bg-white"
+                        className="w-full pl-9 pr-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-ttu-navy focus:border-transparent text-sm dark:text-white"
                         required
                       >
                         <option value="">Select level</option>
@@ -462,7 +491,7 @@ export const Login: React.FC = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-ttu-navy text-white py-3 rounded-xl font-semibold hover:bg-ttu-navy-dark transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg mt-2"
+                className="w-full bg-ttu-navy hover:bg-ttu-navy-dark text-white py-3 sm:py-3.5 rounded-xl font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg mt-3 text-sm sm:text-base cursor-pointer"
               >
                 {loading
                   ? (isSignup ? 'Creating Account...' : 'Logging in...')
@@ -471,15 +500,16 @@ export const Login: React.FC = () => {
               </button>
             </form>
 
-            {/* Toggle Login/Signup */}
-            <div className="mt-6 text-center">
-              <p className="text-xs text-gray-600">
+            {/* Toggle Login/Signup Footer */}
+            <div className="mt-5 text-center pb-4 sm:pb-0">
+              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                 {isSignup ? 'Already have an account?' : "Don't have an account?"}
                 <button
+                  type="button"
                   onClick={toggleMode}
-                  className="ml-1 font-semibold text-ttu-navy hover:text-ttu-navy-dark transition-colors underline underline-offset-2"
+                  className="ml-1 font-semibold text-ttu-navy dark:text-amber-400 hover:underline cursor-pointer"
                 >
-                  {isSignup ? 'Log in' : 'Sign up'}
+                  {isSignup ? 'Sign in' : 'Create account'}
                 </button>
               </p>
             </div>
