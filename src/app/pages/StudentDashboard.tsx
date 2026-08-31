@@ -12,8 +12,9 @@ import {
   getActiveCode,
   getAttendanceStats
 } from '../services/mockData';
+import { useSocket } from '../hooks/useSocket';
 import { getCurrentPosition } from '../services/geolocation';
-import { markAttendanceApi, getCoursesApi, getAttendanceRecordsApi } from '../services/apiData';
+import { markAttendanceApi, getCoursesApi, getAttendanceRecordsApi, getAllActiveSessionsApi } from '../services/apiData';
 import { checkServerHealth } from '../services/apiClient';
 import {
   CheckCircle,
@@ -76,22 +77,62 @@ export const StudentDashboard: React.FC = () => {
     fetchStudentData();
   }, [user]);
 
-  // Poll for active sessions every 10 seconds
-  useEffect(() => {
-    if (!user) return;
+  const [otpInputs, setOtpInputs] = useState<Record<string, string>>({});
+  const { joinCourse, leaveCourse, on, off } = useSocket();
 
-    const refreshSessions = () => {
-      const sessions = getActiveSessionsForStudent(user.id);
-      setActiveSessions(sessions);
+  // Socket.io: Join rooms for all student courses to receive live session events
+  useEffect(() => {
+    if (!courses || courses.length === 0) return;
+    courses.forEach(c => joinCourse(c.id));
+    return () => {
+      courses.forEach(c => leaveCourse(c.id));
+    };
+  }, [courses, joinCourse, leaveCourse]);
+
+  // Poll for active sessions from API & listen to socket events
+  const refreshSessions = useCallback(async () => {
+    if (!user) return;
+    const isOnline = await checkServerHealth();
+    if (isOnline) {
+      const liveSessions = await getAllActiveSessionsApi();
+      if (liveSessions && Array.isArray(liveSessions)) {
+        setActiveSessions(liveSessions);
+        return;
+      }
+    }
+    const sessions = getActiveSessionsForStudent(user.id);
+    setActiveSessions(sessions || []);
+  }, [user]);
+
+  useEffect(() => {
+    refreshSessions();
+    const interval = setInterval(refreshSessions, 5000);
+    return () => clearInterval(interval);
+  }, [refreshSessions]);
+
+  // Socket.io live listener
+  useEffect(() => {
+    const handleSessionStarted = (data: any) => {
+      toast.info('Live attendance session started! Check in now.', { icon: '📡', duration: 4000 });
+      refreshSessions();
+    };
+    const handleSessionEnded = () => {
+      refreshSessions();
     };
 
-    refreshSessions();
-    const interval = setInterval(refreshSessions, 10000);
-    return () => clearInterval(interval);
-  }, [user]);
+    on('session:started', handleSessionStarted);
+    on('session:ended', handleSessionEnded);
+
+    return () => {
+      off('session:started', handleSessionStarted);
+      off('session:ended', handleSessionEnded);
+    };
+  }, [on, off, refreshSessions]);
 
   const handleMarkAttendance = async (courseId: string) => {
     if (!user || !deviceFingerprint) return;
+
+    const otp = (otpInputs[courseId] || '').trim();
 
     setLoading(courseId);
 
@@ -105,13 +146,14 @@ export const StudentDashboard: React.FC = () => {
         const apiResult = await markAttendanceApi(
           courseId,
           position.latitude,
-          position.longitude
+          position.longitude,
+          otp || undefined
         );
 
         if (apiResult.success) {
-          toast.success('Attendance marked successfully!');
-          const history = getStudentAttendance(user.id);
-          setAttendanceHistory(history);
+          toast.success('Attendance marked successfully! (GPS Verified)');
+          const records = await getAttendanceRecordsApi({ studentId: user.id });
+          if (records) setAttendanceHistory(records);
           setLoading(null);
           return;
         } else {
@@ -160,10 +202,6 @@ export const StudentDashboard: React.FC = () => {
     return attendanceHistory.some(a => a.courseId === courseId && a.date === today);
   };
 
-  const hasActiveSession = (courseId: string) => {
-    return activeSessions.some(s => s.courseId === courseId);
-  };
-
   const getSessionForCourse = (courseId: string) => {
     return activeSessions.find(s => s.courseId === courseId);
   };
@@ -184,32 +222,48 @@ export const StudentDashboard: React.FC = () => {
 
     if (session) {
       return (
-        <div className="space-y-2">
+        <div className="space-y-2.5 bg-emerald-50/70 dark:bg-emerald-950/40 p-3 rounded-xl border border-emerald-200 dark:border-emerald-800">
           {/* Active session indicator */}
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-lg">
-            <Radio className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
-            <span className="text-xs font-medium text-emerald-700">
-              Live session by {session.lecturer?.name || 'Lecturer'}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5">
+              <Radio className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
+              <span className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">
+                Live Attendance Active
+              </span>
+            </div>
+            <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-medium">
+              50m GPS Radius
             </span>
           </div>
 
-          <button
-            onClick={() => handleMarkAttendance(course.id)}
-            disabled={isLoading}
-            className="w-full px-4 py-2.5 bg-ttu-navy text-white rounded-lg font-medium hover:bg-ttu-navy-dark transition-colors flex items-center justify-center gap-2 disabled:opacity-70"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Verifying Location...
-              </>
-            ) : (
-              <>
-                <MapPin className="w-4 h-4" />
-                Mark Attendance
-              </>
-            )}
-          </button>
+          <div className="space-y-1.5">
+            <input
+              type="text"
+              maxLength={6}
+              placeholder="Enter 6-digit Code"
+              value={otpInputs[course.id] || ''}
+              onChange={(e) => setOtpInputs({ ...otpInputs, [course.id]: e.target.value })}
+              className="w-full text-center tracking-widest font-mono text-sm py-2 px-3 bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-700 rounded-lg focus:ring-2 focus:ring-emerald-500 font-bold uppercase placeholder:font-normal placeholder:tracking-normal placeholder:text-xs"
+            />
+
+            <button
+              onClick={() => handleMarkAttendance(course.id)}
+              disabled={isLoading}
+              className="w-full px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 disabled:opacity-70 shadow-sm cursor-pointer text-sm"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Verifying GPS & Marking...
+                </>
+              ) : (
+                <>
+                  <MapPin className="w-4 h-4" />
+                  Mark Attendance Now
+                </>
+              )}
+            </button>
+          </div>
         </div>
       );
     }

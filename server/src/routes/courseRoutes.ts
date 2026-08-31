@@ -84,6 +84,22 @@ courseRouter.post('/', authenticateToken, requireRole(['admin']), async (req, re
       include: { lecturer: { select: { id: true, name: true, email: true } } },
     });
 
+    // Auto-enroll all matching registered students
+    try {
+      const matchingStudents = await prisma.user.findMany({
+        where: { role: 'student', programme, level },
+      });
+      for (const student of matchingStudents) {
+        await prisma.enrollment.upsert({
+          where: { studentId_courseId: { studentId: student.id, courseId: course.id } },
+          update: {},
+          create: { studentId: student.id, courseId: course.id },
+        });
+      }
+    } catch (autoErr) {
+      console.warn('Auto-enroll on course creation notice:', autoErr);
+    }
+
     return res.json({ success: true, course });
   } catch (err: any) {
     console.error('Course create error:', err);

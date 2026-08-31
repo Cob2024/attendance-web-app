@@ -110,7 +110,7 @@ enrollmentRouter.get('/course/:courseId', authenticateToken, async (req: AuthReq
       }
     }
 
-    const enrollments = await prisma.enrollment.findMany({
+    let enrollments = await prisma.enrollment.findMany({
       where: { courseId },
       include: {
         student: {
@@ -127,6 +127,48 @@ enrollmentRouter.get('/course/:courseId', authenticateToken, async (req: AuthReq
       },
       orderBy: { student: { name: 'asc' } },
     });
+
+    // If no enrollments exist yet, auto-match by programme + level
+    if (enrollments.length === 0) {
+      const course = await prisma.course.findUnique({ where: { id: courseId } });
+      if (course) {
+        const matchingStudents = await prisma.user.findMany({
+          where: { role: 'student', programme: course.programme, level: course.level },
+          select: { id: true, name: true, email: true, studentId: true, programme: true, level: true, profilePicture: true },
+          orderBy: { name: 'asc' },
+        });
+
+        for (const s of matchingStudents) {
+          try {
+            await prisma.enrollment.upsert({
+              where: { studentId_courseId: { studentId: s.id, courseId } },
+              update: {},
+              create: { studentId: s.id, courseId },
+            });
+          } catch {}
+        }
+
+        if (matchingStudents.length > 0) {
+          enrollments = await prisma.enrollment.findMany({
+            where: { courseId },
+            include: {
+              student: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  studentId: true,
+                  programme: true,
+                  level: true,
+                  profilePicture: true,
+                },
+              },
+            },
+            orderBy: { student: { name: 'asc' } },
+          });
+        }
+      }
+    }
 
     const students = enrollments.map((e) => ({
       ...e.student,

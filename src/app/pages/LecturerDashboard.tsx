@@ -22,7 +22,9 @@ import {
   endSessionApi,
   getActiveSessionApi,
   manualMarkAttendanceApi,
-  getAttendanceRecordsApi
+  getAttendanceRecordsApi,
+  getCourseEnrollmentsApi,
+  getAttendanceWarningsApi
 } from '../services/apiData';
 import { getCurrentPosition } from '../services/geolocation';
 import { EditProfileModal } from '../components/EditProfileModal';
@@ -111,7 +113,46 @@ export const LecturerDashboard: React.FC = () => {
   }, [user]);
 
   useEffect(() => {
-    if (selectedCourse) {
+    const loadCourseData = async () => {
+      if (!selectedCourse) return;
+
+      const isOnline = await checkServerHealth();
+      if (isOnline) {
+        try {
+          const [students, records, activeSession, warningsData] = await Promise.all([
+            getCourseEnrollmentsApi(selectedCourse.id),
+            getAttendanceRecordsApi({ courseId: selectedCourse.id, startDate, endDate }),
+            getActiveSessionApi(selectedCourse.id),
+            getAttendanceWarningsApi(selectedCourse.id)
+          ]);
+
+          setCourseStudents(students || []);
+          setAttendanceRecords(records || []);
+          setActiveCode(activeSession);
+          if (warningsData?.warnings) {
+            setAtRiskStudents(warningsData.warnings);
+          }
+
+          // Calculate real stats from live records
+          const uniqueDates = Array.from(new Set((records || []).map((r: any) => r.date)));
+          const totalSessions = uniqueDates.length;
+          const totalPresent = (records || []).filter((r: any) => r.status === 'present').length;
+          const totalPossible = (students?.length || 0) * (totalSessions || 1);
+          const avgRate = totalPossible > 0 ? Math.round((totalPresent / totalPossible) * 100) : 0;
+
+          setStats({
+            totalStudents: students?.length || 0,
+            totalSessions,
+            averageAttendance: avgRate,
+            presentCount: totalPresent,
+          });
+          return;
+        } catch (e) {
+          console.warn('API error loading course data, falling back', e);
+        }
+      }
+
+      // Local fallback
       const records = getCourseAttendance(selectedCourse.id, startDate, endDate);
       setAttendanceRecords(records);
 
@@ -124,7 +165,9 @@ export const LecturerDashboard: React.FC = () => {
       // Check for active attendance code
       const code = getActiveCode(selectedCourse.id);
       setActiveCode(code);
-    }
+    };
+
+    loadCourseData();
   }, [selectedCourse, startDate, endDate]);
 
   // Socket.io: Join/leave course rooms for real-time events

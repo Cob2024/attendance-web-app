@@ -64,14 +64,14 @@ attendanceRouter.post('/session/start', authenticateToken, requireRole(['lecture
     });
 
     // Security (H4): Emit session started event WITHOUT the OTP code to prevent eavesdropping.
-    // Students are notified a session exists but must get the OTP from the lecturer's screen.
-    getIO().to(`course:${courseId}`).emit('session:started', {
+    const sessionEventData = {
       sessionId: session.id,
       courseId,
       expiresAt: session.expiresAt,
       lecturerName: req.user!.name,
-      // Note: otpCode intentionally NOT included — students must view it physically
-    });
+    };
+    getIO().to(`course:${courseId}`).emit('session:started', sessionEventData);
+    getIO().emit('session:started', sessionEventData);
 
     // Return OTP only in the HTTP response to the lecturer who started the session
     return res.json({ success: true, session, otpCode });
@@ -103,11 +103,58 @@ attendanceRouter.post('/session/end', authenticateToken, requireRole(['lecturer'
 
     // Emit real-time event: session ended
     getIO().to(`course:${courseId}`).emit('session:ended', { courseId });
+    getIO().emit('session:ended', { courseId });
 
     return res.json({ success: true });
   } catch (err: any) {
     console.error('Session end error:', err);
     return res.status(500).json({ success: false, error: 'Failed to end attendance session' });
+  }
+});
+
+// Get All Active Sessions for the current user's courses
+attendanceRouter.get('/sessions/active', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    await autoCloseExpiredSessions();
+
+    const where: any = { isActive: true };
+
+    if (req.user!.role === 'student') {
+      const enrollments = await prisma.enrollment.findMany({
+        where: { studentId: req.user!.id },
+        select: { courseId: true },
+      });
+      const enrolledCourseIds = enrollments.map(e => e.courseId);
+
+      // Also find courses matching programme & level
+      const student = await prisma.user.findUnique({ where: { id: req.user!.id } });
+      let matchingCourseIds: string[] = [];
+      if (student?.programme && student?.level) {
+        const matching = await prisma.course.findMany({
+          where: { programme: student.programme, level: student.level },
+          select: { id: true },
+        });
+        matchingCourseIds = matching.map(m => m.id);
+      }
+
+      const allEligibleIds = Array.from(new Set([...enrolledCourseIds, ...matchingCourseIds]));
+      where.courseId = { in: allEligibleIds };
+    }
+
+    const sessions = await prisma.attendanceSession.findMany({
+      where,
+      include: {
+        course: { select: { id: true, courseName: true, courseCode: true, programme: true, level: true } },
+        lecturer: { select: { id: true, name: true, email: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const safeSessions = sessions.map(({ otpCode, ...s }) => s);
+    return res.json({ success: true, sessions: safeSessions });
+  } catch (err: any) {
+    console.error('Active sessions fetch error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to fetch active sessions' });
   }
 });
 

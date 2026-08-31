@@ -82,6 +82,24 @@ authRouter.post('/register', async (req, res) => {
       },
     });
 
+    // Auto-enroll new student into all matching courses
+    if (role === 'student' && programme && level) {
+      try {
+        const matchingCourses = await prisma.course.findMany({
+          where: { programme: programme.trim(), level: level.trim() },
+        });
+        for (const course of matchingCourses) {
+          await prisma.enrollment.upsert({
+            where: { studentId_courseId: { studentId: user.id, courseId: course.id } },
+            update: {},
+            create: { studentId: user.id, courseId: course.id },
+          });
+        }
+      } catch (enrollErr) {
+        console.warn('Auto-enrollment notice:', enrollErr);
+      }
+    }
+
     const { passwordHash: _, ...userWithoutPassword } = user;
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role, name: user.name },

@@ -169,6 +169,15 @@ export const endSessionApi = async (courseId: string) => {
   }
 };
 
+export const getAllActiveSessionsApi = async () => {
+  try {
+    const data = await apiFetch('/attendance/sessions/active');
+    return data.sessions || [];
+  } catch (err: any) {
+    return [];
+  }
+};
+
 export const getActiveSessionApi = async (courseId: string) => {
   try {
     const data = await apiFetch(`/attendance/session/active/${courseId}`);
