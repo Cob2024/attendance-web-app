@@ -165,7 +165,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
                 </div>
 
                 <p className="text-[10px] text-center text-white/30 pb-2">
-                    © 2026 Takoradi Technical University
+                    © 2026 Takoradi Technical University<br />
+                    <span className="text-ttu-gold/60 italic font-medium">"Nsa na adwen ma mpuntu"</span>
                 </p>
             </div>
         </div>

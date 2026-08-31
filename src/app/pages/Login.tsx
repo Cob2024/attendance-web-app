@@ -222,7 +222,7 @@ export const Login: React.FC = () => {
           {/* Bottom Footer Quote */}
           <div className="relative z-10 pt-4 border-t border-white/15 flex items-center justify-between text-[11px] text-slate-300/80">
             <span>© 2026 Takoradi Technical University</span>
-            <span className="text-amber-400/90 font-semibold">Excellence in Applied Technology</span>
+            <span className="text-amber-400 font-semibold italic">"Nsa na adwen ma mpuntu"</span>
           </div>
         </div>
 

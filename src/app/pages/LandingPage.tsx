@@ -412,7 +412,7 @@ export const LandingPage: React.FC = () => {
 
           <p className="text-xs text-slate-400 text-center md:text-right">
             © 2026 Takoradi Technical University — All Rights Reserved.<br />
-            Excellence in Applied Technology & Research
+            <span className="text-ttu-gold font-semibold italic">"Nsa na adwen ma mpuntu"</span>
           </p>
         </div>
       </footer>
