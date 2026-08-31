@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
+    "build:server": "cd server && npm install && npx prisma generate && npm run build",
+    "start": "cd server && npm start",
     "dev:frontend": "vite --host",
     "dev:server": "cd server && npm run dev",
     "dev": "concurrently -n \"frontend,server\" -c \"blue,green\" \"npm run dev:frontend\" \"npm run dev:server\""
