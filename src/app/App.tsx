@@ -5,6 +5,7 @@ import { router } from './routes';
 import { initializeMockData } from './services/mockData';
 import { registerServiceWorker } from './services/registerSW';
 import { OfflineBanner } from './components/OfflineBanner';
+import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 import { Toaster } from 'sonner';
 
 export default function App() {
@@ -16,6 +17,7 @@ export default function App() {
     return (
         <AuthProvider>
             <OfflineBanner />
+            <PWAInstallPrompt />
             <RouterProvider router={router} />
             <Toaster position="top-right" richColors />
         </AuthProvider>
