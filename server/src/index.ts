@@ -159,25 +159,27 @@ app.use('/api/notifications', notificationRouter);
 import bcrypt from 'bcryptjs';
 import { prisma } from './db.js';
 
-// Auto-provision initial Admin account if one does not exist
+// Auto-provision initial Admin account on boot
 async function ensureAdminAccount() {
   try {
-    const adminExists = await prisma.user.findFirst({ where: { role: 'admin' } });
-    if (!adminExists) {
-      const password = process.env.ADMIN_PASSWORD || 'admin123';
-      const passwordHash = await bcrypt.hash(password, 12);
-      await prisma.user.create({
-        data: {
-          name: 'System Administrator',
-          email: 'admin@ttu.edu.gh',
-          passwordHash,
-          role: 'admin',
-        },
-      });
-      console.log('👤 Initial Admin account auto-provisioned: admin@ttu.edu.gh');
-    }
-  } catch (e) {
-    console.error('Error ensuring admin account:', e);
+    const password = process.env.ADMIN_PASSWORD || 'admin123';
+    const passwordHash = await bcrypt.hash(password, 12);
+    await prisma.user.upsert({
+      where: { email: 'admin@ttu.edu.gh' },
+      update: {
+        passwordHash,
+        role: 'admin',
+      },
+      create: {
+        name: 'System Administrator',
+        email: 'admin@ttu.edu.gh',
+        passwordHash,
+        role: 'admin',
+      },
+    });
+    console.log('👤 Admin account verified & active: admin@ttu.edu.gh');
+  } catch (e: any) {
+    console.error('Error ensuring admin account:', e?.message || e);
   }
 }
 

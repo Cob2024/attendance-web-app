@@ -6,6 +6,28 @@ import { authenticateToken, AuthRequest, JWT_SECRET } from '../middleware/auth.j
 
 export const authRouter = Router();
 
+// Auto-initialize Default Admin Account
+authRouter.get('/init-admin', async (req, res) => {
+  try {
+    const password = process.env.ADMIN_PASSWORD || 'admin123';
+    const passwordHash = await bcrypt.hash(password, 12);
+    const admin = await prisma.user.upsert({
+      where: { email: 'admin@ttu.edu.gh' },
+      update: { passwordHash, role: 'admin' },
+      create: {
+        name: 'System Administrator',
+        email: 'admin@ttu.edu.gh',
+        passwordHash,
+        role: 'admin',
+      },
+    });
+    return res.json({ success: true, message: 'Admin account verified & initialized', email: admin.email });
+  } catch (err: any) {
+    console.error('Init admin error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to initialize admin' });
+  }
+});
+
 // Register User
 authRouter.post('/register', async (req, res) => {
   try {
