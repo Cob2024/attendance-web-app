@@ -7,7 +7,7 @@ const getApiBaseUrl = (): string => {
       return 'http://localhost:5000/api';
     }
   }
-  return 'https://attendace-web-app.onrender.com/api';
+  return 'https://smartattend-api-vnoz.onrender.com/api';
 };
 
 const API_BASE_URL = getApiBaseUrl();
