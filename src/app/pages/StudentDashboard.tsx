@@ -133,6 +133,10 @@ export const StudentDashboard: React.FC = () => {
     if (!user || !deviceFingerprint) return;
 
     const otp = (otpInputs[courseId] || '').trim();
+    if (!otp) {
+      toast.warning("Please enter the 6-digit passcode shown on the lecturer's screen.");
+      return;
+    }
 
     setLoading(courseId);
 
@@ -239,10 +243,12 @@ export const StudentDashboard: React.FC = () => {
           <div className="space-y-1.5">
             <input
               type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
               maxLength={6}
               placeholder="Enter 6-digit Code"
               value={otpInputs[course.id] || ''}
-              onChange={(e) => setOtpInputs({ ...otpInputs, [course.id]: e.target.value })}
+              onChange={(e) => setOtpInputs({ ...otpInputs, [course.id]: e.target.value.replace(/[^0-9A-Za-z]/g, '').toUpperCase() })}
               className="w-full text-center tracking-widest font-mono text-sm py-2 px-3 bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-700 rounded-lg focus:ring-2 focus:ring-emerald-500 font-bold uppercase placeholder:font-normal placeholder:tracking-normal placeholder:text-xs"
             />
 

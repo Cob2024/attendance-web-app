@@ -770,6 +770,31 @@ export const LecturerDashboard: React.FC = () => {
                     {selectedCourse?.courseName} ({selectedCourse?.courseCode})
                   </p>
 
+                  {/* Passcode Card for Students */}
+                  <div className="mt-4 p-4 bg-white/20 backdrop-blur-md rounded-2xl border border-white/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <span className="text-[11px] font-bold text-amber-300 uppercase tracking-widest block">
+                        6-Digit Attendance Code (Share With Class)
+                      </span>
+                      <div className="text-3xl sm:text-4xl font-extrabold font-mono tracking-widest text-white drop-shadow-sm select-all mt-0.5">
+                        {activeCode.code || activeCode.otpCode || '------'}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const code = activeCode.code || activeCode.otpCode;
+                        if (code) {
+                          navigator.clipboard.writeText(code);
+                          toast.success(`Copied code ${code} to clipboard!`);
+                        }
+                      }}
+                      className="px-3.5 py-2 bg-white/20 hover:bg-white/30 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer flex-shrink-0"
+                    >
+                      📋 Copy Code
+                    </button>
+                  </div>
+
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
                     <div className="bg-white/15 backdrop-blur-sm rounded-xl p-3">
                       <p className="text-emerald-200 text-xs mb-1">Students Marked Present</p>
@@ -792,7 +817,7 @@ export const LecturerDashboard: React.FC = () => {
                   </div>
 
                   <p className="text-xs text-emerald-200 mt-3">
-                    Instant 1-Tap Attendance enabled • Started at {new Date(activeCode.createdAt).toLocaleTimeString()}
+                    GPS Geofence active • Started at {new Date(activeCode.createdAt).toLocaleTimeString()}
                     {activeCode.durationMinutes > 0 && ` • Duration: ${activeCode.durationMinutes} min`}
                   </p>
                 </div>
