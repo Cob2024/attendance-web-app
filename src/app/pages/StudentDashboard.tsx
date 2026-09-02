@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { useAuth } from '../context/AuthContext';
 import { Sidebar } from '../components/Sidebar';
@@ -444,7 +444,7 @@ export const StudentDashboard: React.FC = () => {
                           <p className="text-[10px] text-gray-500 uppercase">Attended</p>
                         </div>
                         <div className="bg-gray-50 rounded-lg p-2">
-                          <p className="text-sm font-bold text-gray-900">{stats.totalSessions}</p>
+                          <p className="text-sm font-bold text-gray-900">{stats?.totalSessions || 0}</p>
                           <p className="text-[10px] text-gray-500 uppercase">Sessions</p>
                         </div>
                         <div className="bg-gray-50 rounded-lg p-2">
@@ -621,15 +621,15 @@ export const StudentDashboard: React.FC = () => {
                           {attendanceHistory.slice(0, 10).map((record, index) => (
                             <tr key={index} className="hover:bg-gray-50">
                               <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {new Date(record.date).toLocaleDateString()}
+                                {record.date ? new Date(record.date.includes('T') ? record.date : `${record.date}T00:00:00`).toLocaleDateString() : '—'}
                               </td>
                               <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
                                 <div>
                                   <div className="text-sm font-medium text-gray-900">
-                                    {record.course?.courseName}
+                                    {record.course?.courseName || courses.find((c: any) => c.id === record.courseId)?.courseName || 'Course'}
                                   </div>
                                   <div className="text-sm text-gray-500">
-                                    {record.course?.courseCode}
+                                    {record.course?.courseCode || courses.find((c: any) => c.id === record.courseId)?.courseCode || ''}
                                   </div>
                                 </div>
                               </td>
