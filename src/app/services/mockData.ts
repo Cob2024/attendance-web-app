@@ -250,7 +250,7 @@ export const getActiveCode = (courseId: string) => {
   return codes.find((c: any) => c.courseId === courseId && c.active) || null;
 };
 
-// Deactivate the active code for a course
+// Deactivate the active session for a course and mark unchecked students absent
 export const deactivateCode = (courseId: string) => {
   const codes = JSON.parse(localStorage.getItem('attendanceCodes') || '[]');
   codes.forEach((c: any) => {
@@ -259,6 +259,29 @@ export const deactivateCode = (courseId: string) => {
     }
   });
   localStorage.setItem('attendanceCodes', JSON.stringify(codes));
+
+  // Auto-mark enrolled students who didn't check in as absent
+  const today = new Date().toISOString().split('T')[0];
+  const enrolledStudents = getCourseStudents(courseId);
+  const attendance = JSON.parse(localStorage.getItem('attendance') || '[]');
+
+  enrolledStudents.forEach((student: any) => {
+    const alreadyRecorded = attendance.some(
+      (a: any) => a.studentId === student.id && a.courseId === courseId && a.date === today
+    );
+    if (!alreadyRecorded) {
+      attendance.push({
+        id: `a_absent_${student.id}_${Date.now()}`,
+        studentId: student.id,
+        courseId,
+        date: today,
+        status: 'absent',
+        timestamp: new Date().toISOString(),
+      });
+    }
+  });
+  localStorage.setItem('attendance', JSON.stringify(attendance));
+
   return { success: true };
 };
 

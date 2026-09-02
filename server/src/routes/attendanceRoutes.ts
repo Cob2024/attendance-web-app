@@ -7,16 +7,93 @@ import { getIO } from '../socket.js';
 
 export const attendanceRouter = Router();
 
-// Helper: auto-close expired sessions
+// Helper: Auto-mark all enrolled students who didn't check in within the geofence as absent
+const markUncheckedStudentsAbsent = async (courseId: string, sessionId?: string) => {
+  try {
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    // 1. Get all students enrolled in this course (via Enrollment table)
+    const enrollments = await prisma.enrollment.findMany({
+      where: { courseId },
+      select: { studentId: true },
+    });
+    let enrolledStudentIds = enrollments.map(e => e.studentId);
+
+    // Also include students matching course programme & level
+    const course = await prisma.course.findUnique({ where: { id: courseId } });
+    if (course) {
+      const matchingStudents = await prisma.user.findMany({
+        where: {
+          role: 'student',
+          programme: course.programme,
+          level: course.level,
+        },
+        select: { id: true },
+      });
+      const matchingIds = matchingStudents.map(s => s.id);
+      enrolledStudentIds = Array.from(new Set([...enrolledStudentIds, ...matchingIds]));
+    }
+
+    if (enrolledStudentIds.length === 0) return;
+
+    // 2. Find which of these students already checked in for this course today
+    const existingRecords = await prisma.attendanceRecord.findMany({
+      where: {
+        courseId,
+        date: todayStr,
+        studentId: { in: enrolledStudentIds },
+      },
+      select: { studentId: true },
+    });
+    const checkedInStudentIds = new Set(existingRecords.map(r => r.studentId));
+
+    // 3. For all students NOT in checkedInStudentIds, create an 'absent' record
+    const absentRecords = enrolledStudentIds
+      .filter(id => !checkedInStudentIds.has(id))
+      .map(studentId => ({
+        studentId,
+        courseId,
+        sessionId: sessionId || null,
+        date: todayStr,
+        status: 'absent',
+        isManual: false,
+      }));
+
+    if (absentRecords.length > 0) {
+      await prisma.attendanceRecord.createMany({
+        data: absentRecords,
+        skipDuplicates: true,
+      });
+      console.log(`📋 Auto-marked ${absentRecords.length} student(s) absent for course ${courseId} on ${todayStr}`);
+    }
+  } catch (err) {
+    console.error('Error auto-marking absent students:', err);
+  }
+};
+
+// Helper: auto-close expired sessions and sweep absent students
 const autoCloseExpiredSessions = async () => {
   const now = new Date();
-  await prisma.attendanceSession.updateMany({
+  const expired = await prisma.attendanceSession.findMany({
     where: {
       isActive: true,
       expiresAt: { not: null, lte: now },
     },
-    data: { isActive: false, endedAt: now },
+    select: { id: true, courseId: true },
   });
+
+  if (expired.length > 0) {
+    await prisma.attendanceSession.updateMany({
+      where: {
+        id: { in: expired.map(s => s.id) },
+      },
+      data: { isActive: false, endedAt: now },
+    });
+
+    for (const session of expired) {
+      await markUncheckedStudentsAbsent(session.courseId, session.id);
+    }
+  }
 };
 
 // Start Live Attendance Session (Lecturer)
@@ -90,10 +167,17 @@ attendanceRouter.post('/session/end', authenticateToken, requireRole(['lecturer'
       return res.status(403).json({ success: false, error: 'You can only end sessions for your own courses' });
     }
 
+    const activeSession = await prisma.attendanceSession.findFirst({
+      where: { courseId, isActive: true },
+    });
+
     await prisma.attendanceSession.updateMany({
       where: { courseId, isActive: true },
       data: { isActive: false, endedAt: new Date() },
     });
+
+    // Auto-mark enrolled students who didn't check in within geofence as absent
+    await markUncheckedStudentsAbsent(courseId, activeSession?.id);
 
     // Emit real-time event: session ended
     getIO().to(`course:${courseId}`).emit('session:ended', { courseId });

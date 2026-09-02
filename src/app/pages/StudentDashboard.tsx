@@ -615,10 +615,17 @@ export const StudentDashboard: React.FC = () => {
                                 </div>
                               </td>
                               <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                  <CheckCircle className="w-3 h-3" />
-                                  Present
-                                </span>
+                                {record.status === 'present' ? (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                                    <CheckCircle className="w-3 h-3" />
+                                    Present
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-300">
+                                    <AlertCircle className="w-3 h-3" />
+                                    Absent
+                                  </span>
+                                )}
                               </td>
                               <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-500 hidden sm:table-cell">
                                 {new Date(record.timestamp).toLocaleTimeString()}
