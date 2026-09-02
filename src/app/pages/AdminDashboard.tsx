@@ -1220,7 +1220,7 @@ export const AdminDashboard: React.FC = () => {
                     </thead>
                     <tbody className="divide-y divide-gray-200">
                       {filteredStudents.map((student: any) => {
-                        const deviceBinding = deviceBindings[student.id] || getRegisteredDevice(student.id);
+                        const deviceBinding = student.deviceBinding || deviceBindings[student.id] || getRegisteredDevice(student.id);
                         const isEditing = editingUserId === student.id;
 
                         return (

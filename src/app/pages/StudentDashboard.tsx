@@ -191,6 +191,12 @@ export const StudentDashboard: React.FC = () => {
   };
 
   const getAttendancePercentage = (courseId: string) => {
+    const courseRecords = attendanceHistory.filter((a: any) => a.courseId === courseId);
+    if (courseRecords.length > 0) {
+      const presentCount = courseRecords.filter((a: any) => a.status === 'present').length;
+      return Math.round((presentCount / courseRecords.length) * 100);
+    }
+
     const allCourseRecords = getCourseAttendance(courseId);
     const uniqueDates = new Set(allCourseRecords.map((a: any) => a.date));
     const totalSessions = uniqueDates.size;

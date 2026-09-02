@@ -1,4 +1,7 @@
-const getApiBaseUrl = (): string => {
+let activeApiUrl: string | null = null;
+
+export const getApiBaseUrl = (): string => {
+  if (activeApiUrl) return activeApiUrl;
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
   }
@@ -9,8 +12,6 @@ const getApiBaseUrl = (): string => {
   }
   return 'https://smartattend-api-vnoz.onrender.com/api';
 };
-
-const API_BASE_URL = getApiBaseUrl();
 
 export const getAuthToken = (): string | null => {
   return localStorage.getItem('smartattend_jwt_token');
@@ -25,13 +26,40 @@ export const clearAuthToken = () => {
 };
 
 export const checkServerHealth = async (): Promise<boolean> => {
+  const primaryUrl = getApiBaseUrl();
   try {
-    const response = await fetch(`${API_BASE_URL}/health`, { method: 'GET' });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3500);
+    const response = await fetch(`${primaryUrl}/health`, { method: 'GET', signal: controller.signal });
+    clearTimeout(timeoutId);
     const data = await response.json();
-    return data.status === 'ok';
+    if (data.status === 'ok') {
+      activeApiUrl = primaryUrl;
+      return true;
+    }
   } catch {
-    return false;
+    // Primary failed or timed out
   }
+
+  // Fallback check against the live Render cloud API if primary was local
+  const cloudUrl = 'https://smartattend-api-vnoz.onrender.com/api';
+  if (primaryUrl !== cloudUrl) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      const response = await fetch(`${cloudUrl}/health`, { method: 'GET', signal: controller.signal });
+      clearTimeout(timeoutId);
+      const data = await response.json();
+      if (data.status === 'ok') {
+        activeApiUrl = cloudUrl;
+        return true;
+      }
+    } catch {
+      // Cloud also unreachable
+    }
+  }
+
+  return false;
 };
 
 export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
@@ -45,7 +73,8 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
     (headers as any)['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+  const baseUrl = getApiBaseUrl();
+  const response = await fetch(`${baseUrl}${endpoint}`, {
     ...options,
     headers,
   });
@@ -57,3 +86,4 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
 
   return data;
 };
+

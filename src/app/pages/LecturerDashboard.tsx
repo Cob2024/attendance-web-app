@@ -200,15 +200,24 @@ export const LecturerDashboard: React.FC = () => {
   useEffect(() => {
     if (!activeCode || !selectedCourse) return;
 
-    const refreshCount = () => {
+    const refreshCount = async () => {
       const today = new Date().toISOString().split('T')[0];
+      const isOnline = await checkServerHealth();
+      if (isOnline) {
+        const records = await getAttendanceRecordsApi({ courseId: selectedCourse.id });
+        if (records && Array.isArray(records)) {
+          const todayRecords = records.filter((r: any) => r.date === today && r.status === 'present');
+          setSessionStudentCount(todayRecords.length);
+          return;
+        }
+      }
       const records = getCourseAttendance(selectedCourse.id);
       const todayRecords = records.filter((r: any) => r.date === today);
       setSessionStudentCount(todayRecords.length);
     };
 
     refreshCount();
-    const interval = setInterval(refreshCount, 5000); // Refresh every 5s
+    const interval = setInterval(refreshCount, 4000); // Refresh every 4s
     return () => clearInterval(interval);
   }, [activeCode, selectedCourse]);
 
@@ -258,7 +267,11 @@ export const LecturerDashboard: React.FC = () => {
           sessionDuration
         );
         if (apiRes.success && apiRes.session) {
-          setActiveCode(apiRes.session);
+          const fullSession = {
+            ...apiRes.session,
+            otpCode: apiRes.otpCode || apiRes.session.otpCode,
+          };
+          setActiveCode(fullSession);
           const durationLabel = sessionDuration > 0 ? `(${sessionDuration} min)` : '(Until stopped)';
           toast.success(`Attendance session started ${durationLabel}! GPS Geofence active.`);
           return;
@@ -287,6 +300,12 @@ export const LecturerDashboard: React.FC = () => {
     const isOnline = await checkServerHealth();
     if (isOnline) {
       await endSessionApi(selectedCourse.id);
+      const [records, students] = await Promise.all([
+        getAttendanceRecordsApi({ courseId: selectedCourse.id, startDate, endDate }),
+        getCourseEnrollmentsApi(selectedCourse.id)
+      ]);
+      if (records) setAttendanceRecords(records);
+      if (students) setCourseStudents(students);
     }
 
     deactivateCode(selectedCourse.id);
@@ -294,11 +313,13 @@ export const LecturerDashboard: React.FC = () => {
     setSessionStudentCount(0);
     toast.success('Attendance session ended');
 
-    // Refresh records
-    const records = getCourseAttendance(selectedCourse.id, startDate, endDate);
-    setAttendanceRecords(records);
-    const courseStats = getAttendanceStats(selectedCourse.id);
-    setStats(courseStats);
+    // Refresh records fallback
+    if (!isOnline) {
+      const records = getCourseAttendance(selectedCourse.id, startDate, endDate);
+      setAttendanceRecords(records);
+      const courseStats = getAttendanceStats(selectedCourse.id);
+      setStats(courseStats);
+    }
   };
 
   const downloadPDF = () => {

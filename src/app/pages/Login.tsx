@@ -339,17 +339,16 @@ export const Login: React.FC = () => {
                 </div>
               </div>
 
-              {/* Default Administrator Quick Access */}
+              {/* Quick Institutional Test Accounts for Testing Day */}
               {!isSignup && (
-                <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent rounded-2xl p-3 border border-amber-500/20 text-xs">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500/20 text-amber-500 flex-shrink-0">🔑</span>
-                      <div className="min-w-0 truncate">
-                        <span className="font-bold text-slate-900 dark:text-amber-200">Default Admin: </span>
-                        <span className="text-slate-600 dark:text-amber-300 font-mono text-[11px]">admin@ttu.edu.gh</span>
-                      </div>
-                    </div>
+                <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl p-3.5 border border-slate-200 dark:border-slate-700/80 text-xs">
+                  <div className="flex items-center gap-2 mb-2.5">
+                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500/20 text-amber-500 text-xs flex-shrink-0">🔑</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200 text-xs">
+                      Institutional Test Accounts (Testing Day):
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
                     <button
                       type="button"
                       onClick={() => {
@@ -358,10 +357,50 @@ export const Login: React.FC = () => {
                         setPassword('admin123');
                         setError('');
                       }}
-                      className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl font-bold text-xs transition-all flex-shrink-0 cursor-pointer shadow-xs hover:shadow-md active:scale-95"
-                      title="Quick Fill Admin Credentials"
+                      className={`p-2 rounded-xl text-center border transition-all cursor-pointer ${
+                        role === 'admin' && email === 'admin@ttu.edu.gh'
+                          ? 'bg-amber-500 text-slate-950 font-bold border-amber-500 shadow-xs'
+                          : 'bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
+                      }`}
                     >
-                      Fill Admin
+                      <span className="block text-[11px] font-bold">🛡️ Admin</span>
+                      <span className="block text-[9px] opacity-75 font-mono truncate">admin@ttu</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRole('lecturer');
+                        setEmail('frank.odoom@ttu.edu.gh');
+                        setPassword('lecturer123');
+                        setError('');
+                      }}
+                      className={`p-2 rounded-xl text-center border transition-all cursor-pointer ${
+                        role === 'lecturer' && email === 'frank.odoom@ttu.edu.gh'
+                          ? 'bg-amber-500 text-slate-950 font-bold border-amber-500 shadow-xs'
+                          : 'bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
+                      }`}
+                    >
+                      <span className="block text-[11px] font-bold">👨‍🏫 Lecturer</span>
+                      <span className="block text-[9px] opacity-75 font-mono truncate">frank.odoom</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRole('student');
+                        setEmail('kwabena.mensah@ttu.edu.gh');
+                        setPassword('student123');
+                        setError('');
+                      }}
+                      className={`p-2 rounded-xl text-center border transition-all cursor-pointer ${
+                        role === 'student' && email === 'kwabena.mensah@ttu.edu.gh'
+                          ? 'bg-amber-500 text-slate-950 font-bold border-amber-500 shadow-xs'
+                          : 'bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
+                      }`}
+                    >
+                      <span className="block text-[11px] font-bold">🎓 Student</span>
+                      <span className="block text-[9px] opacity-75 font-mono truncate">kwabena</span>
                     </button>
                   </div>
                 </div>

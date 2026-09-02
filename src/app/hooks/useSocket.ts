@@ -1,31 +1,29 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
+import { getAuthToken, getApiBaseUrl } from '../services/apiClient';
 
 const getSocketUrl = (): string => {
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL.replace('/api', '');
-  }
-  if (typeof window !== 'undefined') {
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      return 'http://localhost:5000';
-    }
-  }
-  return 'https://attendace-web-app.onrender.com';
+  const apiUrl = getApiBaseUrl();
+  return apiUrl.replace(/\/api\/?$/, '');
 };
-
-const SOCKET_URL = getSocketUrl();
 
 /**
  * React hook for Socket.io real-time connection.
- * Auto-connects on mount and disconnects on unmount.
+ * Auto-connects on mount with JWT authentication and disconnects on unmount.
  */
 export function useSocket() {
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
-    const socket = io(SOCKET_URL, {
+    const socketUrl = getSocketUrl();
+    const token = getAuthToken();
+
+    const socket = io(socketUrl, {
       transports: ['websocket', 'polling'],
       autoConnect: true,
+      auth: {
+        token: token || undefined,
+      },
     });
 
     socketRef.current = socket;
