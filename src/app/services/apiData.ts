@@ -190,13 +190,12 @@ export const getActiveSessionApi = async (courseId: string) => {
 export const markAttendanceApi = async (
   courseId: string,
   latitude: number,
-  longitude: number,
-  otpCode?: string
+  longitude: number
 ) => {
   try {
     return await apiFetch('/attendance/mark', {
       method: 'POST',
-      body: JSON.stringify({ courseId, latitude, longitude, otpCode }),
+      body: JSON.stringify({ courseId, latitude, longitude }),
     });
   } catch (err: any) {
     return { success: false, error: err.message };

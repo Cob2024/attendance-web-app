@@ -791,29 +791,25 @@ export const LecturerDashboard: React.FC = () => {
                     {selectedCourse?.courseName} ({selectedCourse?.courseCode})
                   </p>
 
-                  {/* Passcode Card for Students */}
+                  {/* Geofence Status Badge */}
                   <div className="mt-4 p-4 bg-white/20 backdrop-blur-md rounded-2xl border border-white/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div>
-                      <span className="text-[11px] font-bold text-amber-300 uppercase tracking-widest block">
-                        6-Digit Attendance Code (Share With Class)
-                      </span>
-                      <div className="text-3xl sm:text-4xl font-extrabold font-mono tracking-widest text-white drop-shadow-sm select-all mt-0.5">
-                        {activeCode.code || activeCode.otpCode || '------'}
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-emerald-500/30 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <MapPin className="w-5 h-5 text-emerald-200" />
+                      </div>
+                      <div>
+                        <span className="text-[11px] font-bold text-amber-300 uppercase tracking-widest block">
+                          Strict Proximity Geofencing Active
+                        </span>
+                        <p className="text-sm font-semibold text-white mt-0.5">
+                          Students must be physically within 50m of your GPS position to mark attendance
+                        </p>
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const code = activeCode.code || activeCode.otpCode;
-                        if (code) {
-                          navigator.clipboard.writeText(code);
-                          toast.success(`Copied code ${code} to clipboard!`);
-                        }
-                      }}
-                      className="px-3.5 py-2 bg-white/20 hover:bg-white/30 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer flex-shrink-0"
-                    >
-                      📋 Copy Code
-                    </button>
+                    <div className="inline-flex items-center gap-2 bg-emerald-500/30 px-3 py-1.5 rounded-xl border border-emerald-400/40 text-xs font-bold text-emerald-100 flex-shrink-0 self-start sm:self-auto">
+                      <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse"></span>
+                      50m Radius Enforced
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">

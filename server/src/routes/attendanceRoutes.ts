@@ -40,9 +40,6 @@ attendanceRouter.post('/session/start', authenticateToken, requireRole(['lecture
       data: { isActive: false, endedAt: new Date() },
     });
 
-    // Security (M5): Use cryptographically secure random OTP instead of Math.random()
-    const otpCode = customOtp || crypto.randomInt(100000, 999999).toString();
-
     // Compute expiry time (0 or null = no auto-close)
     const duration = durationMinutes ? parseInt(durationMinutes) : 30;
     const expiresAt = duration > 0
@@ -56,14 +53,12 @@ attendanceRouter.post('/session/start', authenticateToken, requireRole(['lecture
         latitude: parseFloat(latitude),
         longitude: parseFloat(longitude),
         radiusMeters: radiusMeters ? parseFloat(radiusMeters) : 50.0,
-        otpCode,
         isActive: true,
         durationMinutes: duration,
         expiresAt,
       },
     });
 
-    // Security (H4): Emit session started event WITHOUT the OTP code to prevent eavesdropping.
     const sessionEventData = {
       sessionId: session.id,
       courseId,
@@ -73,8 +68,7 @@ attendanceRouter.post('/session/start', authenticateToken, requireRole(['lecture
     getIO().to(`course:${courseId}`).emit('session:started', sessionEventData);
     getIO().emit('session:started', sessionEventData);
 
-    // Return OTP only in the HTTP response to the lecturer who started the session
-    return res.json({ success: true, session, otpCode });
+    return res.json({ success: true, session });
   } catch (err: any) {
     console.error('Session start error:', err);
     return res.status(500).json({ success: false, error: 'Failed to start attendance session' });
@@ -183,10 +177,10 @@ attendanceRouter.get('/session/active/:courseId', authenticateToken, async (req,
   }
 });
 
-// Mark Attendance (Student) — Server-Side GPS & OTP Validation
+// Mark Attendance (Student) — Server-Side Strict GPS Geofence Verification
 attendanceRouter.post('/mark', authenticateToken, requireRole(['student']), async (req: AuthRequest, res) => {
   try {
-    const { courseId, latitude, longitude, otpCode } = req.body;
+    const { courseId, latitude, longitude } = req.body;
     const studentId = req.user!.id;
 
     if (!courseId || latitude === undefined || longitude === undefined) {
@@ -202,16 +196,6 @@ attendanceRouter.post('/mark', authenticateToken, requireRole(['student']), asyn
 
     if (!session) {
       return res.status(400).json({ success: false, error: 'No active attendance session for this course' });
-    }
-
-    // Validate 6-digit OTP code if session requires OTP
-    if (session.otpCode) {
-      if (!otpCode || otpCode.trim() !== session.otpCode.trim()) {
-        return res.status(400).json({
-          success: false,
-          error: 'Invalid 6-digit session passcode. Please check the code displayed on the lecturer screen.',
-        });
-      }
     }
 
     // Calculate distance on backend using Haversine

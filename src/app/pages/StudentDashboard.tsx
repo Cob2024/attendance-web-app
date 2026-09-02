@@ -77,7 +77,6 @@ export const StudentDashboard: React.FC = () => {
     fetchStudentData();
   }, [user]);
 
-  const [otpInputs, setOtpInputs] = useState<Record<string, string>>({});
   const { joinCourse, leaveCourse, on, off } = useSocket();
 
   // Socket.io: Join rooms for all student courses to receive live session events
@@ -132,12 +131,6 @@ export const StudentDashboard: React.FC = () => {
   const handleMarkAttendance = async (courseId: string) => {
     if (!user || !deviceFingerprint) return;
 
-    const otp = (otpInputs[courseId] || '').trim();
-    if (!otp) {
-      toast.warning("Please enter the 6-digit passcode shown on the lecturer's screen.");
-      return;
-    }
-
     setLoading(courseId);
 
     try {
@@ -150,12 +143,12 @@ export const StudentDashboard: React.FC = () => {
         const apiResult = await markAttendanceApi(
           courseId,
           position.latitude,
-          position.longitude,
-          otp || undefined
+          position.longitude
         );
 
         if (apiResult.success) {
-          toast.success('Attendance marked successfully! (GPS Verified)');
+          const dist = Math.round(apiResult.distance || 0);
+          toast.success(`Attendance marked successfully! (${dist}m from lecturer — GPS Verified)`);
           const records = await getAttendanceRecordsApi({ studentId: user.id });
           if (records) setAttendanceHistory(records);
           setLoading(null);
@@ -177,7 +170,8 @@ export const StudentDashboard: React.FC = () => {
       );
 
       if (result.success) {
-        toast.success('Attendance marked successfully!');
+        const dist = Math.round(result.distance || 0);
+        toast.success(`Attendance marked successfully! (${dist}m from lecturer — GPS Verified)`);
         const history = getStudentAttendance(user.id);
         setAttendanceHistory(history);
       } else {
@@ -237,45 +231,32 @@ export const StudentDashboard: React.FC = () => {
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5">
               <Radio className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
-              <span className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">
-                Live Attendance Active
+              <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                Live Class in Session
               </span>
             </div>
-            <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-medium">
-              50m GPS Radius
+            <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold bg-emerald-100 dark:bg-emerald-900/50 px-2 py-0.5 rounded-full">
+              50m GPS Geofence
             </span>
           </div>
 
-          <div className="space-y-1.5">
-            <input
-              type="text"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              maxLength={6}
-              placeholder="Enter 6-digit Code"
-              value={otpInputs[course.id] || ''}
-              onChange={(e) => setOtpInputs({ ...otpInputs, [course.id]: e.target.value.replace(/[^0-9A-Za-z]/g, '').toUpperCase() })}
-              className="w-full text-center tracking-widest font-mono text-sm py-2 px-3 bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-700 rounded-lg focus:ring-2 focus:ring-emerald-500 font-bold uppercase placeholder:font-normal placeholder:tracking-normal placeholder:text-xs"
-            />
-
-            <button
-              onClick={() => handleMarkAttendance(course.id)}
-              disabled={isLoading}
-              className="w-full px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 disabled:opacity-70 shadow-sm cursor-pointer text-sm"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Verifying GPS & Marking...
-                </>
-              ) : (
-                <>
-                  <MapPin className="w-4 h-4" />
-                  Mark Attendance Now
-                </>
-              )}
-            </button>
-          </div>
+          <button
+            onClick={() => handleMarkAttendance(course.id)}
+            disabled={isLoading}
+            className="w-full px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition-colors flex items-center justify-center gap-2 disabled:opacity-70 shadow-sm cursor-pointer text-sm"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Calculating GPS Distance...
+              </>
+            ) : (
+              <>
+                <MapPin className="w-4 h-4" />
+                Mark Attendance (GPS Verified)
+              </>
+            )}
+          </button>
         </div>
       );
     }

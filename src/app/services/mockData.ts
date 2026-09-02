@@ -168,7 +168,7 @@ export const markAttendance = (
   attendance.push(newAttendance);
   localStorage.setItem('attendance', JSON.stringify(attendance));
 
-  return { success: true };
+  return { success: true, distance: Math.round(distance) };
 };
 
 // ============================================================
