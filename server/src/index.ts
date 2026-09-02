@@ -159,32 +159,105 @@ app.use('/api/notifications', notificationRouter);
 import bcrypt from 'bcryptjs';
 import { prisma } from './db.js';
 
-// Auto-provision initial Admin account on boot
-async function ensureAdminAccount() {
+// Auto-provision initial institutional test accounts on boot
+async function ensureInitialAccounts() {
   try {
-    const password = process.env.ADMIN_PASSWORD || 'admin123';
-    const passwordHash = await bcrypt.hash(password, 12);
+    const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+    const adminPasswordHash = await bcrypt.hash(adminPassword, 12);
+    const lecturerPasswordHash = await bcrypt.hash('lecturer123', 12);
+    const studentPasswordHash = await bcrypt.hash('student123', 12);
+
+    // 1. Admin
     await prisma.user.upsert({
       where: { email: 'admin@ttu.edu.gh' },
-      update: {
-        passwordHash,
-        role: 'admin',
-      },
+      update: { passwordHash: adminPasswordHash, role: 'admin' },
       create: {
         name: 'System Administrator',
         email: 'admin@ttu.edu.gh',
-        passwordHash,
+        passwordHash: adminPasswordHash,
         role: 'admin',
       },
     });
-    console.log('👤 Admin account verified & active: admin@ttu.edu.gh');
+
+    // 2. Demo Lecturer
+    const lecturer = await prisma.user.upsert({
+      where: { email: 'frank.odoom@ttu.edu.gh' },
+      update: { name: 'Dr. Frank Odoom', passwordHash: lecturerPasswordHash, role: 'lecturer' },
+      create: {
+        name: 'Dr. Frank Odoom',
+        email: 'frank.odoom@ttu.edu.gh',
+        passwordHash: lecturerPasswordHash,
+        role: 'lecturer',
+      },
+    });
+
+    // 3. Demo Student
+    const student = await prisma.user.upsert({
+      where: { email: 'kwabena.mensah@ttu.edu.gh' },
+      update: {
+        name: 'Kwabena Mensah',
+        studentId: 'BC/GRD/22/101',
+        programme: 'Graphic Design',
+        level: 'Level 200',
+        passwordHash: studentPasswordHash,
+        role: 'student',
+      },
+      create: {
+        name: 'Kwabena Mensah',
+        email: 'kwabena.mensah@ttu.edu.gh',
+        studentId: 'BC/GRD/22/101',
+        programme: 'Graphic Design',
+        level: 'Level 200',
+        passwordHash: studentPasswordHash,
+        role: 'student',
+      },
+    });
+
+    // 4. Ensure demo course exists
+    const course = await prisma.course.upsert({
+      where: { courseCode: 'GRD 201' },
+      update: {
+        courseName: 'UI/UX Design Principles',
+        programme: 'Graphic Design',
+        level: 'Level 200',
+        lecturerId: lecturer.id,
+      },
+      create: {
+        courseCode: 'GRD 201',
+        courseName: 'UI/UX Design Principles',
+        programme: 'Graphic Design',
+        level: 'Level 200',
+        semester: 'Second Semester',
+        lecturerId: lecturer.id,
+      },
+    });
+
+    // 5. Ensure student enrollment in demo course
+    await prisma.enrollment.upsert({
+      where: {
+        studentId_courseId: {
+          studentId: student.id,
+          courseId: course.id,
+        },
+      },
+      update: {},
+      create: {
+        studentId: student.id,
+        courseId: course.id,
+      },
+    });
+
+    console.log('👤 Institutional accounts verified & active:');
+    console.log('  🛡️ Admin:    admin@ttu.edu.gh / admin123');
+    console.log('  👨‍🏫 Lecturer: frank.odoom@ttu.edu.gh / lecturer123');
+    console.log('  🎓 Student:  kwabena.mensah@ttu.edu.gh / student123');
   } catch (e: any) {
-    console.error('Error ensuring admin account:', e?.message || e);
+    console.error('Error ensuring initial accounts:', e?.message || e);
   }
 }
 
 httpServer.listen(PORT, '0.0.0.0', async () => {
-  await ensureAdminAccount();
+  await ensureInitialAccounts();
   console.log(`🚀 SmartAttend Security-Hardened Production Server running on port ${PORT}`);
   console.log(`⚡ Socket.io real-time server attached (JWT-authenticated)`);
 });

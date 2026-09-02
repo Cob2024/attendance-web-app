@@ -116,7 +116,7 @@ export const Login: React.FC = () => {
           navigate(user.role === 'student' ? '/student' : user.role === 'admin' ? '/admin' : '/lecturer');
         }
       } else {
-        setError(result.error || 'Login failed');
+        setError(result.error || 'Login failed. Please check your credentials and selected role.');
       }
     }
 

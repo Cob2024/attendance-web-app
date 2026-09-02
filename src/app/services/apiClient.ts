@@ -25,11 +25,11 @@ export const clearAuthToken = () => {
   localStorage.removeItem('smartattend_jwt_token');
 };
 
-export const checkServerHealth = async (): Promise<boolean> => {
+export const checkServerHealth = async (customTimeoutMs: number = 8000): Promise<boolean> => {
   const primaryUrl = getApiBaseUrl();
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3500);
+    const timeoutId = setTimeout(() => controller.abort(), primaryUrl.includes('localhost') ? 2500 : customTimeoutMs);
     const response = await fetch(`${primaryUrl}/health`, { method: 'GET', signal: controller.signal });
     clearTimeout(timeoutId);
     const data = await response.json();
@@ -46,7 +46,8 @@ export const checkServerHealth = async (): Promise<boolean> => {
   if (primaryUrl !== cloudUrl) {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      // Give cloud backend up to customTimeoutMs to wake from sleep
+      const timeoutId = setTimeout(() => controller.abort(), customTimeoutMs);
       const response = await fetch(`${cloudUrl}/health`, { method: 'GET', signal: controller.signal });
       clearTimeout(timeoutId);
       const data = await response.json();

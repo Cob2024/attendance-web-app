@@ -38,16 +38,21 @@ export const CURRENT_SEMESTER = 'Semester 1, 2025/2026';
 // ============================================================
 // Initialize mock database
 // ============================================================
+// ============================================================
+// Initialize mock database
+// ============================================================
 export const initializeMockData = () => {
-  if (!localStorage.getItem('initialized_clean_production_v1')) {
+  if (!localStorage.getItem('initialized_clean_production_v3')) {
     // Clear old demo data
     localStorage.removeItem('initialized');
     localStorage.removeItem('initialized_v2');
     localStorage.removeItem('initialized_v3');
+    localStorage.removeItem('initialized_clean_production_v1');
+    localStorage.removeItem('initialized_clean_production_v2');
     localStorage.removeItem('activeSessions');
     localStorage.removeItem('attendanceRecords');
 
-    // Only master Admin account is seeded; real faculty/students are registered or added via Admin
+    // Default institutional accounts for offline / mock testing
     const users = [
       {
         id: 'a1',
@@ -55,15 +60,182 @@ export const initializeMockData = () => {
         email: 'admin@ttu.edu.gh',
         password: 'admin123',
         role: 'admin'
+      },
+      {
+        id: 'l1',
+        name: 'Dr. Frank Odoom',
+        email: 'frank.odoom@ttu.edu.gh',
+        password: 'lecturer123',
+        role: 'lecturer'
+      },
+      {
+        id: 'l2',
+        name: 'Prof. Emmanuel Mensah',
+        email: 'emmanuel.mensah@ttu.edu.gh',
+        password: 'lecturer123',
+        role: 'lecturer'
+      },
+      {
+        id: 'l3',
+        name: 'Dr. Sarah Boateng',
+        email: 'sarah.boateng@ttu.edu.gh',
+        password: 'lecturer123',
+        role: 'lecturer'
+      },
+      {
+        id: 's1',
+        name: 'Kwabena Mensah',
+        email: 'kwabena.mensah@ttu.edu.gh',
+        password: 'student123',
+        role: 'student',
+        studentId: 'BC/GRD/22/101',
+        programme: 'Graphic Design',
+        level: 'Level 200'
+      },
+      {
+        id: 's2',
+        name: 'Abena Pokuaa',
+        email: 'abena.pokuaa@ttu.edu.gh',
+        password: 'student123',
+        role: 'student',
+        studentId: 'BC/GRD/22/102',
+        programme: 'Graphic Design',
+        level: 'Level 200'
+      },
+      {
+        id: 's3',
+        name: 'Kofi Owusu',
+        email: 'kofi.owusu@ttu.edu.gh',
+        password: 'student123',
+        role: 'student',
+        studentId: 'BC/GRD/22/103',
+        programme: 'Graphic Design',
+        level: 'Level 200'
+      },
+      {
+        id: 's4',
+        name: 'Kojo Antwi',
+        email: 'kojo.antwi@ttu.edu.gh',
+        password: 'student123',
+        role: 'student',
+        studentId: 'BC/CSC/21/201',
+        programme: 'Computer Science',
+        level: 'Level 300'
+      },
+      {
+        id: 's5',
+        name: 'Ama Serwaa',
+        email: 'ama.serwaa@ttu.edu.gh',
+        password: 'student123',
+        role: 'student',
+        studentId: 'BC/CSC/21/202',
+        programme: 'Computer Science',
+        level: 'Level 300'
+      },
+      {
+        id: 's6',
+        name: 'Yaw Boateng',
+        email: 'yaw.boateng@ttu.edu.gh',
+        password: 'student123',
+        role: 'student',
+        studentId: 'BC/EET/22/301',
+        programme: 'Electrical Engineering',
+        level: 'Level 200'
       }
     ];
 
+    const courses = [
+      {
+        id: 'c1',
+        courseName: 'UI/UX Design Principles',
+        courseCode: 'GRD 201',
+        programme: 'Graphic Design',
+        level: 'Level 200',
+        semester: 'Second Semester',
+        lecturerId: 'l1'
+      },
+      {
+        id: 'c2',
+        courseName: 'Digital Illustration & Typography',
+        courseCode: 'GRD 202',
+        programme: 'Graphic Design',
+        level: 'Level 200',
+        semester: 'Second Semester',
+        lecturerId: 'l1'
+      },
+      {
+        id: 'c3',
+        courseName: 'Database Systems & Architecture',
+        courseCode: 'CSC 301',
+        programme: 'Computer Science',
+        level: 'Level 300',
+        semester: 'Second Semester',
+        lecturerId: 'l2'
+      },
+      {
+        id: 'c4',
+        courseName: 'Mobile Application Development',
+        courseCode: 'CSC 302',
+        programme: 'Computer Science',
+        level: 'Level 300',
+        semester: 'Second Semester',
+        lecturerId: 'l2'
+      },
+      {
+        id: 'c5',
+        courseName: 'Circuit Theory & Electronics',
+        courseCode: 'EET 201',
+        programme: 'Electrical Engineering',
+        level: 'Level 200',
+        semester: 'Second Semester',
+        lecturerId: 'l3'
+      }
+    ];
+
+    const enrollments = [
+      { id: 'enr1', studentId: 's1', courseId: 'c1', enrolledAt: new Date().toISOString() },
+      { id: 'enr2', studentId: 's1', courseId: 'c2', enrolledAt: new Date().toISOString() },
+      { id: 'enr3', studentId: 's2', courseId: 'c1', enrolledAt: new Date().toISOString() },
+      { id: 'enr4', studentId: 's2', courseId: 'c2', enrolledAt: new Date().toISOString() },
+      { id: 'enr5', studentId: 's3', courseId: 'c1', enrolledAt: new Date().toISOString() },
+      { id: 'enr6', studentId: 's3', courseId: 'c2', enrolledAt: new Date().toISOString() },
+      { id: 'enr7', studentId: 's4', courseId: 'c3', enrolledAt: new Date().toISOString() },
+      { id: 'enr8', studentId: 's4', courseId: 'c4', enrolledAt: new Date().toISOString() },
+      { id: 'enr9', studentId: 's5', courseId: 'c3', enrolledAt: new Date().toISOString() },
+      { id: 'enr10', studentId: 's5', courseId: 'c4', enrolledAt: new Date().toISOString() },
+      { id: 'enr11', studentId: 's6', courseId: 'c5', enrolledAt: new Date().toISOString() },
+    ];
+
+    // Seed historical attendance for analytics
+    const today = new Date();
+    const pastDates: string[] = [];
+    for (let i = 5; i >= 1; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i * 3);
+      pastDates.push(d.toISOString().split('T')[0]);
+    }
+
+    const attendance: any[] = [];
+    pastDates.forEach((dateStr, idx) => {
+      // Graphic Design attendance (c1, c2)
+      attendance.push({ id: `att_grd1_${idx}`, studentId: 's1', courseId: 'c1', date: dateStr, status: 'present', timestamp: `${dateStr}T09:05:00Z` });
+      attendance.push({ id: `att_grd2_${idx}`, studentId: 's2', courseId: 'c1', date: dateStr, status: 'present', timestamp: `${dateStr}T09:05:00Z` });
+      attendance.push({ id: `att_grd3_${idx}`, studentId: 's3', courseId: 'c1', date: dateStr, status: idx % 2 === 0 ? 'present' : 'absent', timestamp: `${dateStr}T09:05:00Z` });
+
+      attendance.push({ id: `att_grd4_${idx}`, studentId: 's1', courseId: 'c2', date: dateStr, status: 'present', timestamp: `${dateStr}T11:05:00Z` });
+      attendance.push({ id: `att_grd5_${idx}`, studentId: 's2', courseId: 'c2', date: dateStr, status: 'present', timestamp: `${dateStr}T11:05:00Z` });
+
+      // CS attendance (c3, c4)
+      attendance.push({ id: `att_cs1_${idx}`, studentId: 's4', courseId: 'c3', date: dateStr, status: 'present', timestamp: `${dateStr}T10:05:00Z` });
+      attendance.push({ id: `att_cs2_${idx}`, studentId: 's5', courseId: 'c3', date: dateStr, status: 'present', timestamp: `${dateStr}T10:05:00Z` });
+    });
+
     localStorage.setItem('users', JSON.stringify(users));
-    localStorage.setItem('courses', JSON.stringify([]));
-    localStorage.setItem('attendance', JSON.stringify([]));
-    localStorage.setItem('enrollments', JSON.stringify([]));
+    localStorage.setItem('courses', JSON.stringify(courses));
+    localStorage.setItem('attendance', JSON.stringify(attendance));
+    localStorage.setItem('enrollments', JSON.stringify(enrollments));
     localStorage.setItem('deviceBindings', JSON.stringify({}));
-    localStorage.setItem('initialized_clean_production_v1', 'true');
+    localStorage.setItem('initialized_clean_production_v3', 'true');
   }
 };
 
@@ -128,9 +300,10 @@ export const markAttendance = (
     return { success: false, error: deviceCheck.error || 'Device verification failed' };
   }
 
+  let distance = 0;
   // Validate GPS location (50m radius)
   if (session.lecturerLat != null && session.lecturerLng != null) {
-    const distance = calculateDistance(
+    distance = calculateDistance(
       studentLat,
       studentLng,
       session.lecturerLat,

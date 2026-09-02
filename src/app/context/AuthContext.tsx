@@ -64,11 +64,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const login = async (email: string, password: string, role: UserRole): Promise<{ success: boolean; error?: string }> => {
     try {
       const fp = generateDeviceFingerprint();
+      const normalizedEmail = email.trim().toLowerCase();
 
-      // Attempt live backend API login first
-      const isOnline = await checkServerHealth();
+      // Attempt live backend API login first (with cold-start resilience)
+      const isOnline = await checkServerHealth(10000);
       if (isOnline) {
-        const apiResult = await loginUserApi(email, password, role, fp);
+        const apiResult = await loginUserApi(normalizedEmail, password, role, fp);
         if (apiResult.success && apiResult.user) {
           setUser(apiResult.user);
           setDeviceFingerprint(fp);
@@ -82,7 +83,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // Local mock login fallback
       const usersData = localStorage.getItem('users');
       const users = usersData ? JSON.parse(usersData) : [];
-      const foundUser = users.find((u: any) => u.email === email && u.password === password && u.role === role);
+      
+      // Check if email exists under any role for better error feedback
+      const userByEmail = users.find((u: any) => u.email.toLowerCase() === normalizedEmail);
+      if (userByEmail && userByEmail.role !== role) {
+        return {
+          success: false,
+          error: `This account is registered as a ${userByEmail.role.toUpperCase()}, not a ${role.toUpperCase()}. Please select the correct role tab.`,
+        };
+      }
+
+      const foundUser = users.find(
+        (u: any) => u.email.toLowerCase() === normalizedEmail && u.password === password && u.role === role
+      );
 
       if (foundUser) {
         if (role === 'student') {
@@ -98,10 +111,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         localStorage.setItem('currentUser', JSON.stringify(userWithoutPassword));
         return { success: true };
       } else {
-        return { success: false, error: 'Invalid email or password' };
+        if (userByEmail && userByEmail.password !== password) {
+          return { success: false, error: 'Incorrect password for this account.' };
+        }
+        return { success: false, error: 'Invalid email or password for the selected role.' };
       }
-    } catch (error) {
-      return { success: false, error: 'Login failed' };
+    } catch (error: any) {
+      return { success: false, error: error?.message || 'Login failed' };
     }
   };
 
@@ -167,7 +183,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   return (
-    <AuthContext.Provider value={{ user, deviceFingerprint, login, signup, updateProfile, logout, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, deviceFingerprint, isInitializing, login, signup, updateProfile, logout, isAuthenticated: !!user }}>
       {children}
     </AuthContext.Provider>
   );
