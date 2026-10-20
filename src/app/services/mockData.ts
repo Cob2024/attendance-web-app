@@ -1207,3 +1207,100 @@ export const exportAllAttendanceCSV = (programmeFilter?: string, levelFilter?: s
   return csvContent;
 };
 
+// ============================================================
+// Mock Password Reset Helpers (Offline Fallback)
+// ============================================================
+
+export const mockRequestPasswordReset = (
+  identifier: string,
+  channel: 'email' | 'sms',
+  role: string
+): { success: boolean; resetSessionToken?: string; maskedTarget?: string; devCode?: string; error?: string } => {
+  const users = JSON.parse(localStorage.getItem('users') || '[]');
+  const clean = identifier.trim().toLowerCase();
+
+  const user = users.find(
+    (u: any) =>
+      u.role === role &&
+      (u.email?.toLowerCase() === clean || u.studentId?.toLowerCase() === clean)
+  );
+
+  if (!user) {
+    return { success: false, error: 'No account found matching the provided details and role.' };
+  }
+
+  const devCode = Math.floor(100000 + Math.random() * 900000).toString();
+  const sessionToken = btoa(JSON.stringify({
+    userId: user.id,
+    devCode,
+    email: user.email,
+    target: channel === 'email' ? user.email : identifier,
+    channel,
+    role,
+    expiresAt: Date.now() + 15 * 60 * 1000,
+  }));
+
+  const masked = channel === 'email'
+    ? user.email.replace(/(.{2})(.*)(@.*)/, '$1***$3')
+    : identifier.replace(/(\d{3})(.*)(\d{3})/, '$1****$3');
+
+  return {
+    success: true,
+    resetSessionToken: sessionToken,
+    maskedTarget: masked,
+    devCode,
+  };
+};
+
+export const mockVerifyResetCode = (
+  code: string,
+  resetSessionToken: string
+): { success: boolean; verifiedResetToken?: string; error?: string } => {
+  try {
+    const session = JSON.parse(atob(resetSessionToken));
+    if (Date.now() > session.expiresAt) {
+      return { success: false, error: 'Reset session expired. Please request a new code.' };
+    }
+    if (session.devCode !== code.trim()) {
+      return { success: false, error: 'Invalid verification code.' };
+    }
+
+    const verifiedToken = btoa(JSON.stringify({
+      userId: session.userId,
+      purpose: 'verified_reset',
+      expiresAt: Date.now() + 15 * 60 * 1000,
+    }));
+
+    return { success: true, verifiedResetToken: verifiedToken };
+  } catch {
+    return { success: false, error: 'Invalid reset session.' };
+  }
+};
+
+export const mockResetPassword = (
+  newPassword: string,
+  verifiedResetToken: string
+): { success: boolean; error?: string } => {
+  try {
+    const verified = JSON.parse(atob(verifiedResetToken));
+    if (Date.now() > verified.expiresAt || verified.purpose !== 'verified_reset') {
+      return { success: false, error: 'Reset session expired.' };
+    }
+    if (newPassword.length < 6) {
+      return { success: false, error: 'Password must be at least 6 characters.' };
+    }
+
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    const idx = users.findIndex((u: any) => u.id === verified.userId);
+    if (idx === -1) {
+      return { success: false, error: 'User not found.' };
+    }
+
+    users[idx].password = newPassword;
+    localStorage.setItem('users', JSON.stringify(users));
+    return { success: true };
+  } catch {
+    return { success: false, error: 'Failed to reset password.' };
+  }
+};
+

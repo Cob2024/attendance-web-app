@@ -85,6 +85,46 @@ export const changePasswordApi = async (currentPassword: string, newPassword: st
   }
 };
 
+export const requestPasswordResetApi = async (
+  identifier: string,
+  channel: 'email' | 'sms',
+  role: string
+) => {
+  try {
+    return await apiFetch('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ identifier, channel, role }),
+    });
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+};
+
+export const verifyResetCodeApi = async (code: string, resetSessionToken: string) => {
+  try {
+    return await apiFetch('/auth/verify-reset-code', {
+      method: 'POST',
+      body: JSON.stringify({ code, resetSessionToken }),
+    });
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+};
+
+export const resetPasswordApi = async (
+  newPassword: string,
+  verifiedResetToken: string
+) => {
+  try {
+    return await apiFetch('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ newPassword, verifiedResetToken }),
+    });
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+};
+
 // ------------------------------------------------------------
 // Courses API
 // ------------------------------------------------------------

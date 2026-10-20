@@ -19,9 +19,11 @@ import {
   Eye,
   EyeOff
 } from 'lucide-react';
+import { ForgotPasswordModal } from '../components/ForgotPasswordModal';
 
 export const Login: React.FC = () => {
   const [isSignup, setIsSignup] = useState(false);
+  const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -452,9 +454,20 @@ export const Login: React.FC = () => {
 
               {/* Password */}
               <div>
-                <label htmlFor="password" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Password <span className="text-red-500">*</span>
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label htmlFor="password" className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    Password <span className="text-red-500">*</span>
+                  </label>
+                  {!isSignup && (
+                    <button
+                      type="button"
+                      onClick={() => setForgotPasswordOpen(true)}
+                      className="text-xs font-bold text-amber-500 hover:text-amber-600 dark:hover:text-amber-400 hover:underline cursor-pointer transition-colors"
+                    >
+                      Forgot Password?
+                    </button>
+                  )}
+                </div>
                 <div className="relative">
                   <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input
@@ -613,6 +626,18 @@ export const Login: React.FC = () => {
         </div>
 
       </motion.div>
+
+      {/* Forgot Password Recovery Modal */}
+      <ForgotPasswordModal
+        isOpen={forgotPasswordOpen}
+        onClose={() => setForgotPasswordOpen(false)}
+        defaultRole={role === 'lecturer' ? 'lecturer' : 'student'}
+        onSuccess={(completedIdentifier) => {
+          if (completedIdentifier.includes('@')) {
+            setEmail(completedIdentifier);
+          }
+        }}
+      />
     </div>
   );
 };
