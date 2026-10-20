@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth, UserRole } from '../context/AuthContext';
+import { motion, AnimatePresence } from 'motion/react';
 import {
   GraduationCap,
   Mail,
@@ -30,7 +31,7 @@ export const Login: React.FC = () => {
   const [studentId, setStudentId] = useState('');
   const [programme, setProgramme] = useState('');
   const [level, setLevel] = useState('');
-  const [role, setRole] = useState<UserRole | ''>('');
+  const [role, setRole] = useState<'student' | 'lecturer' | ''>('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login, signup } = useAuth();
@@ -58,7 +59,7 @@ export const Login: React.FC = () => {
     setError('');
 
     if (!role) {
-      setError('Please select whether you are a Student, Lecturer, or Admin');
+      setError('Please select whether you are a Student or Lecturer');
       return;
     }
 
@@ -81,7 +82,7 @@ export const Login: React.FC = () => {
         return;
       }
       if (role === 'admin') {
-        setError('Admin accounts cannot be created via signup. Contact system administrator.');
+        setError('Admin registration is not available. Contact your system administrator.');
         setLoading(false);
         return;
       }
@@ -113,7 +114,7 @@ export const Login: React.FC = () => {
         const userData = localStorage.getItem('currentUser');
         if (userData) {
           const user = JSON.parse(userData);
-          navigate(user.role === 'student' ? '/student' : user.role === 'admin' ? '/admin' : '/lecturer');
+          navigate(user.role === 'student' ? '/student' : '/lecturer');
         }
       } else {
         setError(result.error || 'Login failed. Please check your credentials and selected role.');
@@ -125,12 +126,33 @@ export const Login: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-950 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.15),rgba(255,255,255,0))] flex items-center justify-center p-0 sm:p-6 lg:p-8 relative overflow-hidden">
-      {/* Subtle Background Glow Orbs */}
-      <div className="absolute top-1/4 left-10 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
-      <div className="absolute bottom-10 right-10 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
+      {/* Dynamic Animated Ambient Glow Orbs */}
+      <motion.div
+        animate={{
+          scale: [1, 1.2, 1],
+          x: [0, 20, 0],
+          y: [0, -20, 0]
+        }}
+        transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute top-1/4 left-10 w-96 h-96 bg-blue-600/15 rounded-full blur-3xl pointer-events-none"
+      />
+      <motion.div
+        animate={{
+          scale: [1, 1.25, 1],
+          x: [0, -25, 0],
+          y: [0, 25, 0]
+        }}
+        transition={{ duration: 14, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+        className="absolute bottom-10 right-10 w-96 h-96 bg-amber-500/15 rounded-full blur-3xl pointer-events-none"
+      />
 
       {/* Main Container — Full width/height on mobile, luxury rounded card on desktop */}
-      <div className="w-full sm:max-w-5xl xl:max-w-6xl bg-white dark:bg-slate-900 min-h-screen sm:min-h-0 sm:rounded-3xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)] overflow-hidden flex flex-col lg:flex-row border-0 sm:border border-slate-200/80 dark:border-slate-800 relative z-10 backdrop-blur-xl">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.97, y: 15 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        className="w-full sm:max-w-5xl xl:max-w-6xl bg-white dark:bg-slate-900 min-h-screen sm:min-h-0 sm:rounded-3xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)] overflow-hidden flex flex-col lg:flex-row border-0 sm:border border-slate-200/80 dark:border-slate-800 relative z-10 backdrop-blur-xl"
+      >
 
         {/* ===== LEFT SIDE: Campus Hero Image Container (Visible on lg+) ===== */}
         <div className="hidden lg:flex lg:w-1/2 relative bg-ttu-navy min-h-full flex-col justify-between p-8 xl:p-12 overflow-hidden">
@@ -277,12 +299,19 @@ export const Login: React.FC = () => {
             </div>
 
             {/* Error Message */}
-            {error && (
-              <div className="mb-4 p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-xl flex items-center gap-2.5 text-red-700 dark:text-red-300 text-xs sm:text-sm">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                <p className="leading-snug">{error}</p>
-              </div>
-            )}
+            <AnimatePresence>
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                  className="mb-4 p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-xl flex items-center gap-2.5 text-red-700 dark:text-red-300 text-xs sm:text-sm"
+                >
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <p className="leading-snug">{error}</p>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -291,11 +320,13 @@ export const Login: React.FC = () => {
                 <label className="block text-[11px] sm:text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
                   Select Role <span className="text-red-500">*</span>
                 </label>
-                <div className="grid grid-cols-3 gap-2.5">
-                  <button
+                <div className="grid grid-cols-2 gap-2.5">
+                  <motion.button
                     type="button"
+                    whileHover={{ y: -2, scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => setRole(role === 'student' ? '' : 'student')}
-                    className={`flex flex-col items-center justify-center gap-1.5 p-3 rounded-2xl border-2 transition-all duration-200 cursor-pointer transform hover:-translate-y-0.5 ${
+                    className={`flex flex-col items-center justify-center gap-1.5 p-3 rounded-2xl border-2 transition-all duration-200 cursor-pointer ${
                       role === 'student'
                         ? 'border-amber-500 bg-amber-50/70 dark:bg-amber-950/40 text-slate-900 dark:text-amber-300 font-bold shadow-md shadow-amber-500/10 ring-2 ring-amber-500/20'
                         : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 text-slate-600 dark:text-slate-400 bg-slate-50/50 dark:bg-slate-800/40'
@@ -305,12 +336,14 @@ export const Login: React.FC = () => {
                       <GraduationCap className="w-4 h-4 sm:w-5 sm:h-5" />
                     </div>
                     <span className="text-xs font-semibold">Student</span>
-                  </button>
+                  </motion.button>
 
-                  <button
+                  <motion.button
                     type="button"
+                    whileHover={{ y: -2, scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => setRole(role === 'lecturer' ? '' : 'lecturer')}
-                    className={`flex flex-col items-center justify-center gap-1.5 p-3 rounded-2xl border-2 transition-all duration-200 cursor-pointer transform hover:-translate-y-0.5 ${
+                    className={`flex flex-col items-center justify-center gap-1.5 p-3 rounded-2xl border-2 transition-all duration-200 cursor-pointer ${
                       role === 'lecturer'
                         ? 'border-amber-500 bg-amber-50/70 dark:bg-amber-950/40 text-slate-900 dark:text-amber-300 font-bold shadow-md shadow-amber-500/10 ring-2 ring-amber-500/20'
                         : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 text-slate-600 dark:text-slate-400 bg-slate-50/50 dark:bg-slate-800/40'
@@ -320,22 +353,7 @@ export const Login: React.FC = () => {
                       <UserCheck className="w-4 h-4 sm:w-5 sm:h-5" />
                     </div>
                     <span className="text-xs font-semibold">Lecturer</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setRole(role === 'admin' ? '' : 'admin')}
-                    className={`flex flex-col items-center justify-center gap-1.5 p-3 rounded-2xl border-2 transition-all duration-200 cursor-pointer transform hover:-translate-y-0.5 ${
-                      role === 'admin'
-                        ? 'border-amber-500 bg-amber-50/70 dark:bg-amber-950/40 text-slate-900 dark:text-amber-300 font-bold shadow-md shadow-amber-500/10 ring-2 ring-amber-500/20'
-                        : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 text-slate-600 dark:text-slate-400 bg-slate-50/50 dark:bg-slate-800/40'
-                    }`}
-                  >
-                    <div className={`p-1.5 rounded-xl ${role === 'admin' ? 'bg-amber-500 text-slate-950 shadow-sm' : 'bg-slate-200/60 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400'}`}>
-                      <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5" />
-                    </div>
-                    <span className="text-xs font-semibold">Admin</span>
-                  </button>
+                  </motion.button>
                 </div>
               </div>
 
@@ -348,27 +366,11 @@ export const Login: React.FC = () => {
                       Institutional Test Accounts (Testing Day):
                     </span>
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <button
+                  <div className="grid grid-cols-2 gap-2">
+                    <motion.button
                       type="button"
-                      onClick={() => {
-                        setRole('admin');
-                        setEmail('admin@ttu.edu.gh');
-                        setPassword('admin123');
-                        setError('');
-                      }}
-                      className={`p-2 rounded-xl text-center border transition-all cursor-pointer ${
-                        role === 'admin' && email === 'admin@ttu.edu.gh'
-                          ? 'bg-amber-500 text-slate-950 font-bold border-amber-500 shadow-xs'
-                          : 'bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
-                      }`}
-                    >
-                      <span className="block text-[11px] font-bold">🛡️ Admin</span>
-                      <span className="block text-[9px] opacity-75 font-mono truncate">admin@ttu</span>
-                    </button>
-
-                    <button
-                      type="button"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
                       onClick={() => {
                         setRole('lecturer');
                         setEmail('frank.odoom@ttu.edu.gh');
@@ -383,10 +385,12 @@ export const Login: React.FC = () => {
                     >
                       <span className="block text-[11px] font-bold">👨‍🏫 Lecturer</span>
                       <span className="block text-[9px] opacity-75 font-mono truncate">frank.odoom</span>
-                    </button>
+                    </motion.button>
 
-                    <button
+                    <motion.button
                       type="button"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
                       onClick={() => {
                         setRole('student');
                         setEmail('kwabena.mensah@ttu.edu.gh');
@@ -401,7 +405,7 @@ export const Login: React.FC = () => {
                     >
                       <span className="block text-[11px] font-bold">🎓 Student</span>
                       <span className="block text-[9px] opacity-75 font-mono truncate">kwabena</span>
-                    </button>
+                    </motion.button>
                   </div>
                 </div>
               )}
@@ -566,16 +570,18 @@ export const Login: React.FC = () => {
               )}
 
               {/* Submit Button */}
-              <button
+              <motion.button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-gradient-to-r from-ttu-navy via-slate-900 to-ttu-navy hover:from-slate-900 hover:to-ttu-navy text-white py-3.5 rounded-xl font-bold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl hover:shadow-ttu-navy/20 active:scale-[0.99] mt-4 text-sm sm:text-base cursor-pointer border border-white/10"
+                whileHover={{ scale: 1.01, y: -1 }}
+                whileTap={{ scale: 0.99 }}
+                className="w-full bg-gradient-to-r from-ttu-navy via-slate-900 to-ttu-navy hover:from-slate-900 hover:to-ttu-navy text-white py-3.5 rounded-xl font-bold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl hover:shadow-ttu-navy/20 mt-4 text-sm sm:text-base cursor-pointer border border-white/10"
               >
                 {loading
                   ? (isSignup ? 'Creating Account...' : 'Authenticating...')
                   : (isSignup ? 'Create Account' : 'Sign In to Portal')
                 }
-              </button>
+              </motion.button>
             </form>
 
             {/* Toggle Login/Signup Footer */}
@@ -595,7 +601,7 @@ export const Login: React.FC = () => {
           </div>
         </div>
 
-      </div>
+      </motion.div>
     </div>
   );
 };

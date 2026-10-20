@@ -1,6 +1,7 @@
 import { createBrowserRouter } from 'react-router';
 import { LandingPage } from './pages/LandingPage';
 import { Login } from './pages/Login';
+import { AdminLogin } from './pages/AdminLogin';
 import { StudentDashboard } from './pages/StudentDashboard';
 import { LecturerDashboard } from './pages/LecturerDashboard';
 import { AdminDashboard } from './pages/AdminDashboard';
@@ -17,6 +18,11 @@ export const router = createBrowserRouter([
   {
     path: '/login',
     element: <Login />,
+    errorElement: <ErrorBoundary />,
+  },
+  {
+    path: '/admin/login',
+    element: <AdminLogin />,
     errorElement: <ErrorBoundary />,
   },
   {

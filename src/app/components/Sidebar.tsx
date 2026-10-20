@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router';
 import { useAuth } from '../context/AuthContext';
+import { motion } from 'motion/react';
 import {
     LayoutDashboard,
     BookOpen,
@@ -43,8 +44,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
     }, [isDark]);
 
     const handleLogout = () => {
+        const isAdmin = user?.role === 'admin';
         logout();
-        navigate('/login');
+        navigate(isAdmin ? '/admin/login' : '/login');
     };
 
     const menuItems = user?.role === 'student' ? [
@@ -95,10 +97,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
                         ? location.pathname === item.path
                         : location.pathname.startsWith(item.path);
                     return (
-                        <button
+                        <motion.button
                             key={index}
+                            whileHover={{ x: 4 }}
+                            whileTap={{ scale: 0.98 }}
                             onClick={() => handleNavClick(item.path)}
-                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${isActive
+                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group cursor-pointer ${isActive
                                 ? 'bg-white/10 text-white font-semibold'
                                 : 'text-white/60 hover:bg-white/5 hover:text-white'
                                 }`}
@@ -106,16 +110,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
                             <item.icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-white/60 group-hover:text-white'}`} />
                             <span>{item.name}</span>
                             {isActive && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_8px_white]"></div>}
-                        </button>
+                        </motion.button>
                     );
                 })}
             </nav>
 
             {/* Dark Mode Toggle */}
             <div className="px-4 mb-2">
-                <button
+                <motion.button
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => setIsDark(!isDark)}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-white/60 hover:bg-white/5 hover:text-white transition-all duration-200"
+                    className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-white/60 hover:bg-white/5 hover:text-white transition-all duration-200 cursor-pointer"
                 >
                     {isDark ? (
                         <Sun className="w-5 h-5" />
@@ -126,7 +131,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
                     <div className={`ml-auto w-9 h-5 rounded-full transition-colors duration-200 flex items-center px-0.5 ${isDark ? 'bg-ttu-gold' : 'bg-white/20'}`}>
                         <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-200 ${isDark ? 'translate-x-4' : 'translate-x-0'}`}></div>
                     </div>
-                </button>
+                </motion.button>
             </div>
 
             {/* User Area */}

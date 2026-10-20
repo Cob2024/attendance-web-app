@@ -18,10 +18,16 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    // Redirect admin routes to the separate admin login page
+    const isAdminRoute = allowedRoles?.includes('admin');
+    return <Navigate to={isAdminRoute ? '/admin/login' : '/login'} replace />;
   }
 
   if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+    // If an admin somehow lands on /login, send them to /admin/login
+    if (user.role === 'admin') {
+      return <Navigate to="/admin" replace />;
+    }
     return <Navigate to="/login" replace />;
   }
 

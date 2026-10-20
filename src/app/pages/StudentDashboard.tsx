@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router';
 import { useAuth } from '../context/AuthContext';
 import { Sidebar } from '../components/Sidebar';
 import { EditProfileModal } from '../components/EditProfileModal';
+import { motion, AnimatePresence } from 'motion/react';
 import {
   getStudentCourses,
   markAttendance,
@@ -328,50 +329,62 @@ export const StudentDashboard: React.FC = () => {
 
           {/* Active Sessions Banner */}
           {!isCoursesView && activeSessions.length > 0 && (
-            <div className="mb-6 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl shadow-lg p-4 text-white">
+            <motion.div
+              initial={{ opacity: 0, y: -10, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.4 }}
+              className="mb-6 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 rounded-2xl shadow-xl p-5 text-white border border-emerald-400/20"
+            >
               <div className="flex items-center gap-2 mb-3">
-                <Radio className="w-5 h-5 animate-pulse" />
-                <h2 className="font-semibold">
-                  {activeSessions.length} Active Session{activeSessions.length !== 1 ? 's' : ''}
+                <span className="relative flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-200 opacity-80"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
+                </span>
+                <Radio className="w-5 h-5 text-emerald-200 animate-pulse" />
+                <h2 className="font-bold text-base">
+                  {activeSessions.length} Active Attendance Session{activeSessions.length !== 1 ? 's' : ''} Live Now
                 </h2>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 {activeSessions.map(session => (
-                  <div
+                  <motion.div
                     key={session.id}
-                    className="bg-white/15 rounded-lg p-3 flex items-center justify-between"
+                    whileHover={{ scale: 1.01 }}
+                    className="bg-white/15 backdrop-blur-md rounded-xl p-3.5 flex items-center justify-between border border-white/20"
                   >
                     <div>
-                      <p className="font-medium text-sm">{session.course?.courseName}</p>
-                      <p className="text-emerald-200 text-xs">{session.course?.courseCode} • {session.lecturer?.name}</p>
+                      <p className="font-bold text-sm text-white">{session.course?.courseName}</p>
+                      <p className="text-emerald-100 text-xs font-medium">{session.course?.courseCode} • {session.lecturer?.name}</p>
                     </div>
                     {isTodayMarked(session.courseId) ? (
-                      <div className="flex items-center gap-1 bg-white/20 px-2 py-1 rounded-full">
-                        <CheckCircle className="w-3.5 h-3.5" />
-                        <span className="text-xs font-medium">Done</span>
+                      <div className="flex items-center gap-1.5 bg-emerald-400/30 text-emerald-100 border border-emerald-300/40 px-3 py-1.5 rounded-xl font-bold text-xs">
+                        <CheckCircle className="w-3.5 h-3.5 text-emerald-200" />
+                        <span>Present</span>
                       </div>
                     ) : (
-                      <button
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
                         onClick={() => handleMarkAttendance(session.courseId)}
                         disabled={loading === session.courseId}
-                        className="px-3 py-1.5 bg-white text-ttu-navy rounded-lg text-xs font-semibold hover:bg-white/90 transition-colors disabled:opacity-70 flex items-center gap-1.5 cursor-pointer"
+                        className="px-4 py-2 bg-white text-emerald-900 rounded-xl text-xs font-extrabold hover:bg-emerald-50 transition-all shadow-md disabled:opacity-70 flex items-center gap-1.5 cursor-pointer"
                       >
                         {loading === session.courseId ? (
-                          <Loader2 className="w-3 h-3 animate-spin" />
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
                         ) : (
-                          <MapPin className="w-3 h-3" />
+                          <MapPin className="w-3.5 h-3.5 text-emerald-600" />
                         )}
-                        Mark
-                      </button>
+                        Mark Attendance
+                      </motion.button>
                     )}
-                  </div>
+                  </motion.div>
                 ))}
               </div>
-              <div className="flex items-center gap-1.5 mt-3 text-emerald-200">
-                <Shield className="w-3.5 h-3.5" />
-                <p className="text-xs">Location verified within 50m • Device locked to your account</p>
+              <div className="flex items-center gap-1.5 mt-3.5 text-emerald-100 text-xs font-medium">
+                <Shield className="w-4 h-4 text-emerald-300" />
+                <p>Location verified within 50m • Cryptographically locked to your hardware</p>
               </div>
-            </div>
+            </motion.div>
           )}
 
           {isCoursesView ? (
@@ -406,7 +419,12 @@ export const StudentDashboard: React.FC = () => {
                   const stats = getAttendanceStats(course.id);
                   const myAttendances = attendanceHistory.filter(a => a.courseId === course.id && a.status === 'present').length;
                   return (
-                  <div key={course.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
+                  <motion.div
+                    key={course.id}
+                    whileHover={{ y: -4 }}
+                    transition={{ duration: 0.2 }}
+                    className="bg-white dark:bg-slate-800 rounded-2xl shadow-xs border border-gray-200 dark:border-slate-700 overflow-hidden hover:shadow-lg transition-all"
+                  >
                     <div className="p-4 lg:p-6">
                       <div className="flex items-start justify-between mb-4">
                         <div className="min-w-0 flex-1 mr-3">
@@ -453,7 +471,7 @@ export const StudentDashboard: React.FC = () => {
 
                       {renderAttendanceAction(course)}
                     </div>
-                  </div>
+                  </motion.div>
                   );
                 }) : (
                   <div className="col-span-full bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
