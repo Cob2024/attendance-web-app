@@ -217,11 +217,18 @@ export const AdminLogin: React.FC = () => {
         </div>
 
         {/* Footer */}
-        <div className="mt-6 text-center">
+        <div className="mt-6 text-center space-y-2">
+          <button
+            type="button"
+            onClick={() => navigate('/privacy')}
+            className="text-[11px] text-slate-500 hover:text-amber-400 underline transition-colors cursor-pointer"
+          >
+            Privacy Policy &amp; Security Compliance
+          </button>
           <p className="text-[11px] text-slate-600">
             © 2026 Takoradi Technical University — SmartAttend Administration
           </p>
-          <p className="text-[10px] text-slate-700 mt-1">
+          <p className="text-[10px] text-slate-700">
             Unauthorized access attempts are logged and reported.
           </p>
         </div>

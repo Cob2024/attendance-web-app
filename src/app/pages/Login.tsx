@@ -585,7 +585,7 @@ export const Login: React.FC = () => {
             </form>
 
             {/* Toggle Login/Signup Footer */}
-            <div className="mt-6 text-center pb-4 sm:pb-0">
+            <div className="mt-6 text-center pb-2">
               <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
                 {isSignup ? 'Already have an account?' : "Don't have an account?"}
                 <button
@@ -596,6 +596,17 @@ export const Login: React.FC = () => {
                   {isSignup ? 'Sign in' : 'Create account'}
                 </button>
               </p>
+            </div>
+
+            {/* Privacy Policy Link */}
+            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 text-center pb-4 sm:pb-0">
+              <button
+                type="button"
+                onClick={() => navigate('/privacy')}
+                className="text-[11px] text-slate-400 hover:text-ttu-navy dark:hover:text-ttu-gold transition-colors cursor-pointer"
+              >
+                Privacy Policy &amp; Geolocation Data Usage
+              </button>
             </div>
 
           </div>

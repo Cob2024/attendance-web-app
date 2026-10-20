@@ -571,10 +571,19 @@ export const LandingPage: React.FC = () => {
             </div>
           </div>
 
-          <p className="text-xs text-slate-400 text-center md:text-right leading-relaxed">
-            © 2026 Takoradi Technical University — All Rights Reserved.<br />
-            <span className="text-ttu-gold font-semibold italic">"Nsa na adwen ma mpuntu"</span>
-          </p>
+          <div className="flex flex-col sm:flex-row items-center gap-4 text-xs text-slate-400">
+            <button
+              onClick={() => navigate('/privacy')}
+              className="hover:text-ttu-gold transition-colors underline cursor-pointer"
+            >
+              Privacy Policy & Data Protection
+            </button>
+            <span className="hidden sm:inline text-slate-700">•</span>
+            <p className="text-center md:text-right leading-relaxed">
+              © 2026 Takoradi Technical University — All Rights Reserved.<br />
+              <span className="text-ttu-gold font-semibold italic">"Nsa na adwen ma mpuntu"</span>
+            </p>
+          </div>
         </div>
       </footer>
 

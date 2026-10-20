@@ -169,10 +169,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
                     </button>
                 </div>
 
-                <p className="text-[10px] text-center text-white/30 pb-2">
-                    © 2026 Takoradi Technical University<br />
-                    <span className="text-ttu-gold/60 italic font-medium">"Nsa na adwen ma mpuntu"</span>
-                </p>
+                <div className="text-center pb-2 space-y-1">
+                    <button
+                        onClick={() => navigate('/privacy')}
+                        className="text-[10px] text-white/40 hover:text-ttu-gold transition-colors underline cursor-pointer"
+                    >
+                        Privacy Policy &amp; Security
+                    </button>
+                    <p className="text-[10px] text-white/30">
+                        © 2026 Takoradi Technical University<br />
+                        <span className="text-ttu-gold/60 italic font-medium">"Nsa na adwen ma mpuntu"</span>
+                    </p>
+                </div>
             </div>
         </div>
     );
