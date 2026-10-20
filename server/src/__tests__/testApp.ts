@@ -3,6 +3,15 @@
  * This creates the app without starting the HTTP server or Socket.io.
  * We initialize a mock Socket.io server to satisfy the getIO() calls in routes.
  */
+import dotenv from 'dotenv';
+import path from 'path';
+
+dotenv.config({ path: path.resolve(process.cwd(), 'server/.env') });
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+if (!process.env.JWT_SECRET) {
+  process.env.JWT_SECRET = 'test_jwt_secret_dev_key_for_unit_tests';
+}
+
 import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
