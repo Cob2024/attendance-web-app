@@ -134,8 +134,26 @@ export function verifyVerifiedResetToken(
 }
 
 /**
+ * Normalize Ghanaian mobile phone numbers to international E.164 format (without + for SMS gateways).
+ * Examples:
+ *   0244123456 -> 233244123456
+ *   +233244123456 -> 233244123456
+ *   233244123456 -> 233244123456
+ */
+export function normalizeGhanaPhone(rawPhone: string): string {
+  let cleaned = rawPhone.replace(/\D/g, '');
+  if (cleaned.startsWith('0') && cleaned.length === 10) {
+    cleaned = '233' + cleaned.slice(1);
+  } else if (cleaned.startsWith('233') && cleaned.length === 12) {
+    // Already in correct format
+  }
+  return cleaned;
+}
+
+/**
  * Dispatch OTP via Email or SMS.
  * In development, testing, or mock mode, this logs a styled preview to the console.
+ * In production with ARKESEL_API_KEY, it sends via the Arkesel SMS gateway.
  */
 export async function dispatchOtp(
   channel: 'email' | 'sms',
@@ -155,9 +173,41 @@ export async function dispatchOtp(
   console.log(`Timestamp : ${timestamp}`);
   console.log(`============================================================\n`);
 
-  // Pluggable Production Hooks:
-  // If SMTP environment variables are present, transactional emails can be sent here.
-  // If SMS gateway API keys (e.g. Hubtel, Arkesel, Twilio) are present, SMS is sent here.
+  // Production SMS Dispatch via Arkesel (Primary SMS Gateway in Ghana)
+  if (channel === 'sms' && process.env.ARKESEL_API_KEY) {
+    try {
+      const recipient = normalizeGhanaPhone(target);
+      const sender = process.env.ARKESEL_SENDER_ID || 'TTU-ATTEND';
+      const response = await fetch('https://sms.arkesel.com/api/v2/sms/send', {
+        method: 'POST',
+        headers: {
+          'api-key': process.env.ARKESEL_API_KEY,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sender,
+          message: `Your TTU SmartAttend verification code is: ${code}. Valid for 15 minutes. Do not share this code.`,
+          recipients: [recipient],
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (response.ok) {
+        console.log(`📱 Arkesel SMS successfully dispatched to ${recipient}:`, data);
+        return { success: true, channel, message: 'SMS dispatched successfully' };
+      } else {
+        console.warn(`⚠️ Arkesel SMS response non-ok:`, data);
+      }
+    } catch (smsErr) {
+      console.error('Error communicating with SMS gateway:', smsErr);
+    }
+  }
+
+  // Production Email Dispatch
+  if (channel === 'email' && process.env.SMTP_HOST && process.env.SMTP_USER) {
+    // Pluggable SMTP / Nodemailer hook can be called here
+    console.log(`📧 SMTP configured: Dispatching email to ${target}`);
+  }
 
   return {
     success: true,

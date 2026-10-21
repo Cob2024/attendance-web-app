@@ -9,7 +9,7 @@ import jwt from 'jsonwebtoken';
 import { setIO } from './socket.js';
 import { authRouter } from './routes/authRoutes.js';
 import { courseRouter } from './routes/courseRoutes.js';
-import { attendanceRouter } from './routes/attendanceRoutes.js';
+import { attendanceRouter, autoCloseExpiredSessions } from './routes/attendanceRoutes.js';
 import { adminRouter } from './routes/adminRoutes.js';
 import { enrollmentRouter } from './routes/enrollmentRoutes.js';
 import { notificationRouter } from './routes/notificationRoutes.js';
@@ -260,4 +260,14 @@ httpServer.listen(PORT, '0.0.0.0', async () => {
   await ensureInitialAccounts();
   console.log(`🚀 SmartAttend Security-Hardened Production Server running on port ${PORT}`);
   console.log(`⚡ Socket.io real-time server attached (JWT-authenticated)`);
+
+  // Background Worker: Sweep expired sessions & reconcile absent students every 60s
+  setInterval(async () => {
+    try {
+      await autoCloseExpiredSessions();
+    } catch (err: any) {
+      console.error('Session expiration sweep error:', err?.message || err);
+    }
+  }, 60 * 1000);
+  console.log(`⏱️  Background Attendance Reconciliation Worker active (60s cycle)`);
 });

@@ -230,12 +230,13 @@ export const getActiveSessionApi = async (courseId: string) => {
 export const markAttendanceApi = async (
   courseId: string,
   latitude: number,
-  longitude: number
+  longitude: number,
+  accuracy?: number
 ) => {
   try {
     return await apiFetch('/attendance/mark', {
       method: 'POST',
-      body: JSON.stringify({ courseId, latitude, longitude }),
+      body: JSON.stringify({ courseId, latitude, longitude, accuracy }),
     });
   } catch (err: any) {
     return { success: false, error: err.message };

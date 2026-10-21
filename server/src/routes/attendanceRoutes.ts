@@ -72,7 +72,7 @@ const markUncheckedStudentsAbsent = async (courseId: string, sessionId?: string)
 };
 
 // Helper: auto-close expired sessions and sweep absent students
-const autoCloseExpiredSessions = async () => {
+export const autoCloseExpiredSessions = async () => {
   const now = new Date();
   const expired = await prisma.attendanceSession.findMany({
     where: {
@@ -264,7 +264,7 @@ attendanceRouter.get('/session/active/:courseId', authenticateToken, async (req,
 // Mark Attendance (Student) — Server-Side Strict GPS Geofence Verification
 attendanceRouter.post('/mark', authenticateToken, requireRole(['student']), async (req: AuthRequest, res) => {
   try {
-    const { courseId, latitude, longitude } = req.body;
+    const { courseId, latitude, longitude, accuracy } = req.body;
     const studentId = req.user!.id;
 
     if (!courseId || latitude === undefined || longitude === undefined) {
@@ -290,10 +290,14 @@ attendanceRouter.post('/mark', authenticateToken, requireRole(['student']), asyn
       session.longitude
     );
 
-    if (distance > session.radiusMeters) {
+    // Adaptive indoor GPS tolerance: account for mobile GPS drift inside concrete lecture halls (capped at 15m)
+    const accuracyBuffer = Math.min(Math.max(0, parseFloat(accuracy) || 0), 15);
+    const maxAllowedDistance = session.radiusMeters + accuracyBuffer;
+
+    if (distance > maxAllowedDistance) {
       return res.status(400).json({
         success: false,
-        error: `Out of range. You are ${Math.round(distance)}m away from the classroom. Max allowed distance is ${session.radiusMeters}m.`,
+        error: `Out of range. You are ${Math.round(distance)}m away from the classroom. Max allowed distance is ${session.radiusMeters}m${accuracyBuffer > 0 ? ` (+${Math.round(accuracyBuffer)}m GPS buffer)` : ''}.`,
       });
     }
 

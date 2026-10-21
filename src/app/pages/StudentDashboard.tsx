@@ -144,7 +144,8 @@ export const StudentDashboard: React.FC = () => {
         const apiResult = await markAttendanceApi(
           courseId,
           position.latitude,
-          position.longitude
+          position.longitude,
+          position.accuracy
         );
 
         if (apiResult.success) {
