@@ -1,29 +1,27 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { useAuth, UserRole } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   GraduationCap,
+  UserCheck,
   Mail,
   Lock,
-  AlertCircle,
-  UserCheck,
   User,
   IdCard,
   BookOpen,
   BarChart3,
-  ShieldCheck,
-  MapPin,
-  Smartphone,
-  CheckCircle2,
+  AlertCircle,
   Eye,
-  EyeOff
+  EyeOff,
+  ArrowRight
 } from 'lucide-react';
 import { ForgotPasswordModal } from '../components/ForgotPasswordModal';
 
 export const Login: React.FC = () => {
   const [isSignup, setIsSignup] = useState(false);
   const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
+  const [role, setRole] = useState<'student' | 'lecturer'>('student');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -33,9 +31,9 @@ export const Login: React.FC = () => {
   const [studentId, setStudentId] = useState('');
   const [programme, setProgramme] = useState('');
   const [level, setLevel] = useState('');
-  const [role, setRole] = useState<'student' | 'lecturer' | ''>('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
   const { login, signup } = useAuth();
   const navigate = useNavigate();
 
@@ -47,7 +45,6 @@ export const Login: React.FC = () => {
     setStudentId('');
     setProgramme('');
     setLevel('');
-    setRole('');
     setError('');
   };
 
@@ -59,12 +56,6 @@ export const Login: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-
-    if (!role) {
-      setError('Please select whether you are a Student or Lecturer');
-      return;
-    }
-
     setLoading(true);
 
     if (isSignup) {
@@ -83,11 +74,6 @@ export const Login: React.FC = () => {
         setLoading(false);
         return;
       }
-      if (role === 'admin') {
-        setError('Admin registration is not available. Contact your system administrator.');
-        setLoading(false);
-        return;
-      }
       if (role === 'student' && (!studentId.trim() || !programme.trim() || !level)) {
         setError('Please fill in all student details (Student ID, Programme, Level)');
         setLoading(false);
@@ -98,7 +84,7 @@ export const Login: React.FC = () => {
         name.trim(),
         email.trim(),
         password,
-        role as 'student' | 'lecturer',
+        role,
         role === 'student' ? studentId.trim() : undefined,
         role === 'student' ? programme.trim() : undefined,
         role === 'student' ? level : undefined
@@ -119,7 +105,7 @@ export const Login: React.FC = () => {
           navigate(user.role === 'student' ? '/student' : '/lecturer');
         }
       } else {
-        setError(result.error || 'Login failed. Please check your credentials and selected role.');
+        setError(result.error || 'Login failed. Please verify your credentials and selected role.');
       }
     }
 
@@ -127,511 +113,352 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.15),rgba(255,255,255,0))] flex items-center justify-center p-0 sm:p-6 lg:p-8 relative overflow-hidden">
-      {/* Dynamic Animated Ambient Glow Orbs */}
-      <motion.div
-        animate={{
-          scale: [1, 1.2, 1],
-          x: [0, 20, 0],
-          y: [0, -20, 0]
-        }}
-        transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute top-1/4 left-10 w-96 h-96 bg-blue-600/15 rounded-full blur-3xl pointer-events-none"
-      />
-      <motion.div
-        animate={{
-          scale: [1, 1.25, 1],
-          x: [0, -25, 0],
-          y: [0, 25, 0]
-        }}
-        transition={{ duration: 14, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-        className="absolute bottom-10 right-10 w-96 h-96 bg-amber-500/15 rounded-full blur-3xl pointer-events-none"
-      />
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col justify-center py-10 sm:py-16 px-4 sm:px-6 lg:px-8 relative overflow-hidden transition-colors">
+      {/* Subtle Ambient Radial Highlight */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-amber-500/10 via-slate-50 to-slate-100 dark:from-amber-500/10 dark:via-slate-950 dark:to-slate-950 pointer-events-none" />
 
-      {/* Main Container — Full width/height on mobile, luxury rounded card on desktop */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.97, y: 15 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-        className="w-full sm:max-w-5xl xl:max-w-6xl bg-white dark:bg-slate-900 min-h-screen sm:min-h-0 sm:rounded-3xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)] overflow-hidden flex flex-col lg:flex-row border-0 sm:border border-slate-200/80 dark:border-slate-800 relative z-10 backdrop-blur-xl"
-      >
-
-        {/* ===== LEFT SIDE: Campus Hero Image Container (Visible on lg+) ===== */}
-        <div className="hidden lg:flex lg:w-1/2 relative bg-ttu-navy min-h-full flex-col justify-between p-8 xl:p-12 overflow-hidden">
-          {/* Background Campus Image with Overlay */}
-          <div className="absolute inset-0 z-0">
-            <img
-              src="/assets/ttu-campus-hero.jpg"
-              alt="Takoradi Technical University Campus"
-              className="w-full h-full object-cover object-center transform scale-105 transition-transform duration-1000 hover:scale-110"
-            />
-            {/* Rich Navy Gradient Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-ttu-navy/90 to-ttu-navy/70 backdrop-brightness-90"></div>
+      <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
+        {/* Institutional Branding Header */}
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 bg-white dark:bg-slate-900 rounded-2xl shadow-md border border-slate-200 dark:border-slate-800 p-2.5 mx-auto flex items-center justify-center ring-4 ring-amber-500/10">
+            <img src="/assets/ttu-logo.png" alt="TTU Crest" className="w-full h-full object-contain" />
           </div>
-
-          {/* Top Brand Header */}
-          <div className="relative z-10 flex items-center gap-4">
-            <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center p-2.5 shadow-xl ring-2 ring-amber-400/40 flex-shrink-0">
-              <img src="/assets/ttu-logo.png" alt="TTU Logo" className="w-full h-full object-contain" />
-            </div>
-            <div>
-              <h2 className="text-xl font-extrabold text-white leading-tight tracking-tight">Takoradi Technical University</h2>
-              <div className="flex items-center gap-2 mt-0.5">
-                <span className="text-xs text-amber-400 font-bold uppercase tracking-wider">SmartAttend Portal</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span className="text-[10px] text-emerald-300 font-medium">Cloud Active</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Hero Content & Feature Highlights */}
-          <div className="relative z-10 my-auto text-white space-y-6 py-6">
-            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-white/20 text-xs font-semibold text-amber-300 shadow-sm">
-              <ShieldCheck className="w-4 h-4 text-amber-400" />
-              <span>Location & Hardware Verified Attendance</span>
-            </div>
-
-            <h1 className="text-3xl xl:text-4xl font-extrabold text-white leading-tight">
-              Next-Gen GPS & Mobile Attendance System
-            </h1>
-
-            <p className="text-sm text-slate-200/90 leading-relaxed max-w-lg">
-              Official institutional attendance platform. Ensure tamper-proof session tracking with geofenced location verification and hardware device locking.
-            </p>
-
-            {/* Feature List Badges */}
-            <div className="grid grid-cols-2 gap-3.5 pt-2">
-              <div className="flex items-center gap-3 bg-white/10 backdrop-blur-md p-3.5 rounded-2xl border border-white/15 hover:bg-white/15 transition-all">
-                <div className="p-2 bg-emerald-500/20 rounded-xl">
-                  <MapPin className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                </div>
-                <div>
-                  <div className="text-xs font-bold text-white">50m GPS Geofence</div>
-                  <div className="text-[10px] text-slate-300">Classroom radius verification</div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 bg-white/10 backdrop-blur-md p-3.5 rounded-2xl border border-white/15 hover:bg-white/15 transition-all">
-                <div className="p-2 bg-purple-500/20 rounded-xl">
-                  <Smartphone className="w-4 h-4 text-purple-300 flex-shrink-0" />
-                </div>
-                <div>
-                  <div className="text-xs font-bold text-white">Anti-Proxy Lock</div>
-                  <div className="text-[10px] text-slate-300">Single hardware device binding</div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 bg-white/10 backdrop-blur-md p-3.5 rounded-2xl border border-white/15 hover:bg-white/15 transition-all">
-                <div className="p-2 bg-amber-500/20 rounded-xl">
-                  <BarChart3 className="w-4 h-4 text-amber-300 flex-shrink-0" />
-                </div>
-                <div>
-                  <div className="text-xs font-bold text-white">Live Roster Sync</div>
-                  <div className="text-[10px] text-slate-300">Instant check-in updates</div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 bg-white/10 backdrop-blur-md p-3.5 rounded-2xl border border-white/15 hover:bg-white/15 transition-all">
-                <div className="p-2 bg-teal-500/20 rounded-xl">
-                  <CheckCircle2 className="w-4 h-4 text-teal-300 flex-shrink-0" />
-                </div>
-                <div>
-                  <div className="text-xs font-bold text-white">PDF & Excel Reports</div>
-                  <div className="text-[10px] text-slate-300">One-click compliance sheets</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Bottom Footer Quote */}
-          <div className="relative z-10 pt-4 border-t border-white/15 flex items-center justify-between text-[11px] text-slate-300/80">
-            <span>© 2026 Takoradi Technical University</span>
-            <span className="text-amber-400 font-semibold italic">"Nsa na adwen ma mpuntu"</span>
-          </div>
+          <h1 className="mt-4 text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+            Takoradi Technical University
+          </h1>
+          <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">
+            SmartAttend Attendance Portal
+          </p>
         </div>
 
-        {/* ===== RIGHT SIDE: Login / Signup Form Container ===== */}
-        <div className="w-full lg:w-1/2 p-6 sm:p-10 xl:p-12 flex flex-col justify-center bg-white dark:bg-slate-900">
-          <div className="max-w-md w-full mx-auto">
+        {/* Main Clean Card */}
+        <div className="bg-white dark:bg-slate-900 py-8 px-6 sm:px-8 shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-200/80 dark:border-slate-800 rounded-3xl">
+          
+          {/* Segmented Sign In / Create Account Toggle */}
+          <div className="grid grid-cols-2 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl mb-6">
+            <button
+              type="button"
+              onClick={() => { if (isSignup) toggleMode(); }}
+              className={`py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                !isSignup
+                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
+            >
+              Sign In
+            </button>
+            <button
+              type="button"
+              onClick={() => { if (!isSignup) toggleMode(); }}
+              className={`py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                isSignup
+                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
+            >
+              Create Account
+            </button>
+          </div>
 
-            {/* Mobile Header Banner (Compact & Elegant on Mobile) */}
-            <div className="lg:hidden flex items-center gap-3.5 mb-5 pb-4 border-b border-gray-100 dark:border-slate-800">
-              <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center p-1.5 shadow-sm border border-gray-200 dark:border-slate-700 flex-shrink-0">
-                <img src="/assets/ttu-logo.png" alt="TTU Logo" className="w-full h-full object-contain" />
-              </div>
-              <div className="min-w-0">
-                <h2 className="text-base font-bold text-gray-900 dark:text-white leading-tight truncate">SmartAttend Portal</h2>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Takoradi Technical University</p>
-              </div>
-            </div>
-
-            {/* Segmented Tab Switcher (Sign In vs Register) */}
-            <div className="flex bg-slate-100 dark:bg-slate-800/80 p-1.5 rounded-2xl mb-6 border border-slate-200/60 dark:border-slate-700/60">
+          {/* Role Pill Selector */}
+          <div className="mb-5">
+            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-2">
+              Select Role
+            </label>
+            <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={() => { if (isSignup) toggleMode(); }}
-                className={`flex-1 py-2.5 text-xs sm:text-sm font-bold rounded-xl transition-all cursor-pointer ${
-                  !isSignup
-                    ? 'bg-white dark:bg-slate-900 text-ttu-navy dark:text-amber-400 shadow-sm border border-slate-200/50 dark:border-slate-700'
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                onClick={() => setRole('student')}
+                className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                  role === 'student'
+                    ? 'border-amber-500 bg-amber-50/70 dark:bg-amber-950/30 text-amber-900 dark:text-amber-300 ring-1 ring-amber-500/30 shadow-xs'
+                    : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/40'
                 }`}
               >
-                Sign In
+                <GraduationCap className={`w-4 h-4 ${role === 'student' ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400'}`} />
+                <span>Student</span>
               </button>
+
               <button
                 type="button"
-                onClick={() => { if (!isSignup) toggleMode(); }}
-                className={`flex-1 py-2.5 text-xs sm:text-sm font-bold rounded-xl transition-all cursor-pointer ${
-                  isSignup
-                    ? 'bg-white dark:bg-slate-900 text-ttu-navy dark:text-amber-400 shadow-sm border border-slate-200/50 dark:border-slate-700'
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                onClick={() => setRole('lecturer')}
+                className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                  role === 'lecturer'
+                    ? 'border-amber-500 bg-amber-50/70 dark:bg-amber-950/30 text-amber-900 dark:text-amber-300 ring-1 ring-amber-500/30 shadow-xs'
+                    : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/40'
                 }`}
               >
-                Create Account
+                <UserCheck className={`w-4 h-4 ${role === 'lecturer' ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400'}`} />
+                <span>Lecturer</span>
               </button>
             </div>
+          </div>
 
-            <div className="mb-5">
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-                {isSignup ? 'Create Your Account' : 'Welcome Back'}
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-                {isSignup ? 'Register to start tracking attendance' : 'Sign in to access your attendance portal'}
-              </p>
-            </div>
+          {/* Error Message */}
+          <AnimatePresence>
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                className="mb-4 p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-xl flex items-center gap-2.5 text-red-600 dark:text-red-300 text-xs"
+              >
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <p className="leading-snug">{error}</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-            {/* Error Message */}
-            <AnimatePresence>
-              {error && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                  className="mb-4 p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-xl flex items-center gap-2.5 text-red-700 dark:text-red-300 text-xs sm:text-sm"
-                >
-                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                  <p className="leading-snug">{error}</p>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Role Selection Cards */}
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Full Name (Sign up only) */}
+            {isSignup && (
               <div>
-                <label className="block text-[11px] sm:text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
-                  Select Role <span className="text-red-500">*</span>
-                </label>
-                <div className="grid grid-cols-2 gap-2.5">
-                  <motion.button
-                    type="button"
-                    whileHover={{ y: -2, scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => setRole(role === 'student' ? '' : 'student')}
-                    className={`flex flex-col items-center justify-center gap-1.5 p-3 rounded-2xl border-2 transition-all duration-200 cursor-pointer ${
-                      role === 'student'
-                        ? 'border-amber-500 bg-amber-50/70 dark:bg-amber-950/40 text-slate-900 dark:text-amber-300 font-bold shadow-md shadow-amber-500/10 ring-2 ring-amber-500/20'
-                        : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 text-slate-600 dark:text-slate-400 bg-slate-50/50 dark:bg-slate-800/40'
-                    }`}
-                  >
-                    <div className={`p-1.5 rounded-xl ${role === 'student' ? 'bg-amber-500 text-slate-950 shadow-sm' : 'bg-slate-200/60 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400'}`}>
-                      <GraduationCap className="w-4 h-4 sm:w-5 sm:h-5" />
-                    </div>
-                    <span className="text-xs font-semibold">Student</span>
-                  </motion.button>
-
-                  <motion.button
-                    type="button"
-                    whileHover={{ y: -2, scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => setRole(role === 'lecturer' ? '' : 'lecturer')}
-                    className={`flex flex-col items-center justify-center gap-1.5 p-3 rounded-2xl border-2 transition-all duration-200 cursor-pointer ${
-                      role === 'lecturer'
-                        ? 'border-amber-500 bg-amber-50/70 dark:bg-amber-950/40 text-slate-900 dark:text-amber-300 font-bold shadow-md shadow-amber-500/10 ring-2 ring-amber-500/20'
-                        : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 text-slate-600 dark:text-slate-400 bg-slate-50/50 dark:bg-slate-800/40'
-                    }`}
-                  >
-                    <div className={`p-1.5 rounded-xl ${role === 'lecturer' ? 'bg-amber-500 text-slate-950 shadow-sm' : 'bg-slate-200/60 dark:bg-slate-700/60 text-slate-500 dark:text-slate-400'}`}>
-                      <UserCheck className="w-4 h-4 sm:w-5 sm:h-5" />
-                    </div>
-                    <span className="text-xs font-semibold">Lecturer</span>
-                  </motion.button>
-                </div>
-              </div>
-
-              {/* Quick Institutional Test Accounts for Testing Day */}
-              {!isSignup && (
-                <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl p-3.5 border border-slate-200 dark:border-slate-700/80 text-xs">
-                  <div className="flex items-center gap-2 mb-2.5">
-                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500/20 text-amber-500 text-xs flex-shrink-0">🔑</span>
-                    <span className="font-bold text-slate-800 dark:text-slate-200 text-xs">
-                      Institutional Test Accounts (Testing Day):
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <motion.button
-                      type="button"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => {
-                        setRole('lecturer');
-                        setEmail('frank.odoom@ttu.edu.gh');
-                        setPassword('lecturer123');
-                        setError('');
-                      }}
-                      className={`p-2 rounded-xl text-center border transition-all cursor-pointer ${
-                        role === 'lecturer' && email === 'frank.odoom@ttu.edu.gh'
-                          ? 'bg-amber-500 text-slate-950 font-bold border-amber-500 shadow-xs'
-                          : 'bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
-                      }`}
-                    >
-                      <span className="block text-[11px] font-bold">👨‍🏫 Lecturer</span>
-                      <span className="block text-[9px] opacity-75 font-mono truncate">frank.odoom</span>
-                    </motion.button>
-
-                    <motion.button
-                      type="button"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => {
-                        setRole('student');
-                        setEmail('kwabena.mensah@ttu.edu.gh');
-                        setPassword('student123');
-                        setError('');
-                      }}
-                      className={`p-2 rounded-xl text-center border transition-all cursor-pointer ${
-                        role === 'student' && email === 'kwabena.mensah@ttu.edu.gh'
-                          ? 'bg-amber-500 text-slate-950 font-bold border-amber-500 shadow-xs'
-                          : 'bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
-                      }`}
-                    >
-                      <span className="block text-[11px] font-bold">🎓 Student</span>
-                      <span className="block text-[9px] opacity-75 font-mono truncate">kwabena</span>
-                    </motion.button>
-                  </div>
-                </div>
-              )}
-
-              {/* Full Name (signup only) */}
-              {isSignup && (
-                <div>
-                  <label htmlFor="name" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                    Full Name <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input
-                      id="name"
-                      type="text"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 text-sm dark:text-white transition-all placeholder:text-slate-400"
-                      placeholder="e.g. Arhinful Emmanuel Kwabena"
-                      required
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Email Address */}
-              <div>
-                <label htmlFor="email" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Email Address <span className="text-red-500">*</span>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Full Name <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 text-sm dark:text-white transition-all placeholder:text-slate-400"
-                    placeholder={role === 'lecturer' ? 'lecturer@ttu.edu.gh' : role === 'admin' ? 'admin@ttu.edu.gh' : 'student@ttu.edu.gh'}
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. Kwabena Mensah"
+                    className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-900/60 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-colors"
                     required
                   />
                 </div>
               </div>
+            )}
 
-              {/* Password */}
+            {/* Email Address */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                Institutional Email <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder={role === 'student' ? 'student@ttu.edu.gh' : 'lecturer@ttu.edu.gh'}
+                  className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-900/60 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-colors"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Password */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  Password <span className="text-red-500">*</span>
+                </label>
+                {!isSignup && (
+                  <button
+                    type="button"
+                    onClick={() => setForgotPasswordOpen(true)}
+                    className="text-xs font-semibold text-amber-600 dark:text-amber-400 hover:underline cursor-pointer"
+                  >
+                    Forgot password?
+                  </button>
+                )}
+              </div>
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full pl-10 pr-10 py-2.5 bg-white dark:bg-slate-900/60 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-colors"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-0.5"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Confirm Password (Sign up only) */}
+            {isSignup && (
               <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label htmlFor="password" className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                    Password <span className="text-red-500">*</span>
-                  </label>
-                  {!isSignup && (
-                    <button
-                      type="button"
-                      onClick={() => setForgotPasswordOpen(true)}
-                      className="text-xs font-bold text-amber-500 hover:text-amber-600 dark:hover:text-amber-400 hover:underline cursor-pointer transition-colors"
-                    >
-                      Forgot Password?
-                    </button>
-                  )}
-                </div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Confirm Password <span className="text-red-500">*</span>
+                </label>
                 <div className="relative">
                   <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-10 pr-10 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 text-sm dark:text-white transition-all placeholder:text-slate-400"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="••••••••"
+                    className="w-full pl-10 pr-10 py-2.5 bg-white dark:bg-slate-900/60 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-colors"
                     required
                   />
                   <button
                     type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-1"
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-0.5"
+                    aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
                   >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
+            )}
 
-              {/* Confirm Password (signup only) */}
-              {isSignup && (
+            {/* Extra Student Details (Sign up only) */}
+            {isSignup && role === 'student' && (
+              <div className="space-y-3 pt-2 border-t border-slate-200 dark:border-slate-800">
                 <div>
-                  <label htmlFor="confirmPassword" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                    Confirm Password <span className="text-red-500">*</span>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                    Student ID <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
-                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <IdCard className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input
-                      id="confirmPassword"
-                      type={showConfirmPassword ? 'text' : 'password'}
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="w-full pl-10 pr-10 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 text-sm dark:text-white transition-all placeholder:text-slate-400"
-                      placeholder="••••••••"
+                      type="text"
+                      value={studentId}
+                      onChange={(e) => setStudentId(e.target.value)}
+                      placeholder="e.g. BC/GRD/22/101"
+                      className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-900/60 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-colors"
                       required
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-1"
-                      aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                    Programme <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <BookOpen className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      type="text"
+                      value={programme}
+                      onChange={(e) => setProgramme(e.target.value)}
+                      placeholder="e.g. Graphic Design"
+                      className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-900/60 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-colors"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                    Academic Level <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <BarChart3 className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <select
+                      value={level}
+                      onChange={(e) => setLevel(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-900/60 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-colors"
+                      required
                     >
-                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
+                      <option value="">Select level</option>
+                      <option value="Level 100">Level 100</option>
+                      <option value="Level 200">Level 200</option>
+                      <option value="Level 300">Level 300</option>
+                      <option value="Level 400">Level 400</option>
+                    </select>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Primary Submit Button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full mt-2 bg-slate-950 hover:bg-slate-900 dark:bg-amber-500 dark:hover:bg-amber-400 text-white dark:text-slate-950 font-bold py-3 px-4 rounded-xl text-sm transition-all shadow-md active:scale-[0.99] disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+            >
+              {loading ? (
+                <span>{isSignup ? 'Creating Account...' : 'Authenticating...'}</span>
+              ) : (
+                <>
+                  <span>{isSignup ? 'Create Account' : 'Sign In to Portal'}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
               )}
+            </button>
+          </form>
 
-              {/* Student Extra Details (signup only) */}
-              {isSignup && role === 'student' && (
-                <div className="space-y-3 pt-2.5 border-t border-slate-200 dark:border-slate-800">
-                  <div>
-                    <label htmlFor="studentId" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                      Student ID Number <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <IdCard className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                      <input
-                        id="studentId"
-                        type="text"
-                        value={studentId}
-                        onChange={(e) => setStudentId(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 text-sm dark:text-white transition-all placeholder:text-slate-400"
-                        placeholder="e.g. BC/GRD/22/118"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label htmlFor="course" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                      Programme <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <BookOpen className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                      <input
-                        id="course"
-                        type="text"
-                        value={programme}
-                        onChange={(e) => setProgramme(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 text-sm dark:text-white transition-all placeholder:text-slate-400"
-                        placeholder="e.g. Graphic Design"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label htmlFor="level" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                      Level <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <BarChart3 className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                      <select
-                        id="level"
-                        value={level}
-                        onChange={(e) => setLevel(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 text-sm dark:text-white transition-all"
-                        required
-                      >
-                        <option value="">Select level</option>
-                        <option value="Level 100">Level 100</option>
-                        <option value="Level 200">Level 200</option>
-                        <option value="Level 300">Level 300</option>
-                        <option value="Level 400">Level 400</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Submit Button */}
-              <motion.button
-                type="submit"
-                disabled={loading}
-                whileHover={{ scale: 1.01, y: -1 }}
-                whileTap={{ scale: 0.99 }}
-                className="w-full bg-gradient-to-r from-ttu-navy via-slate-900 to-ttu-navy hover:from-slate-900 hover:to-ttu-navy text-white py-3.5 rounded-xl font-bold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl hover:shadow-ttu-navy/20 mt-4 text-sm sm:text-base cursor-pointer border border-white/10"
-              >
-                {loading
-                  ? (isSignup ? 'Creating Account...' : 'Authenticating...')
-                  : (isSignup ? 'Create Account' : 'Sign In to Portal')
-                }
-              </motion.button>
-            </form>
-
-            {/* Toggle Login/Signup Footer */}
-            <div className="mt-6 text-center pb-2">
-              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
-                {isSignup ? 'Already have an account?' : "Don't have an account?"}
+          {/* Quick Demo Credentials Bar (Clean & Compact) */}
+          {!isSignup && (
+            <div className="mt-6 pt-5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
+              <span className="text-[11px] text-slate-400 font-medium">Quick Demo:</span>
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={toggleMode}
-                  className="ml-1.5 font-bold text-ttu-navy dark:text-amber-400 hover:underline cursor-pointer"
+                  onClick={() => {
+                    setRole('student');
+                    setEmail('kwabena.mensah@ttu.edu.gh');
+                    setPassword('student123');
+                    setError('');
+                  }}
+                  className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-amber-500/10 hover:text-amber-600 dark:hover:text-amber-400 text-[11px] font-semibold text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
                 >
-                  {isSignup ? 'Sign in' : 'Create account'}
+                  🎓 Student
                 </button>
-              </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRole('lecturer');
+                    setEmail('frank.odoom@ttu.edu.gh');
+                    setPassword('lecturer123');
+                    setError('');
+                  }}
+                  className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-amber-500/10 hover:text-amber-600 dark:hover:text-amber-400 text-[11px] font-semibold text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
+                >
+                  👨‍🏫 Lecturer
+                </button>
+              </div>
             </div>
+          )}
 
-            {/* Privacy Policy Link */}
-            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 text-center pb-4 sm:pb-0">
+          {/* Bottom Switcher */}
+          <div className="mt-5 text-center">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {isSignup ? 'Already registered?' : "Don't have an account?"}{' '}
               <button
                 type="button"
-                onClick={() => navigate('/privacy')}
-                className="text-[11px] text-slate-400 hover:text-ttu-navy dark:hover:text-ttu-gold transition-colors cursor-pointer"
+                onClick={toggleMode}
+                className="font-bold text-amber-600 dark:text-amber-400 hover:underline cursor-pointer"
               >
-                Privacy Policy &amp; Geolocation Data Usage
+                {isSignup ? 'Sign in' : 'Create an account'}
               </button>
-            </div>
-
+            </p>
           </div>
         </div>
 
-      </motion.div>
+        {/* Footer Links */}
+        <div className="mt-6 text-center space-y-2">
+          <button
+            type="button"
+            onClick={() => navigate('/privacy')}
+            className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors cursor-pointer"
+          >
+            Privacy Policy &amp; Geolocation Data Usage
+          </button>
+          <p className="text-[11px] text-slate-400">
+            © 2026 Takoradi Technical University. All rights reserved.
+          </p>
+        </div>
+      </div>
 
       {/* Forgot Password Recovery Modal */}
       <ForgotPasswordModal
         isOpen={forgotPasswordOpen}
         onClose={() => setForgotPasswordOpen(false)}
-        defaultRole={role === 'lecturer' ? 'lecturer' : 'student'}
+        defaultRole={role}
         onSuccess={(completedIdentifier) => {
           if (completedIdentifier.includes('@')) {
             setEmail(completedIdentifier);
