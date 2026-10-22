@@ -18,13 +18,6 @@ import { getCurrentPosition } from '../services/geolocation';
 import { markAttendanceApi, getCoursesApi, getAttendanceRecordsApi, getAllActiveSessionsApi } from '../services/apiData';
 import { checkServerHealth } from '../services/apiClient';
 import {
-  QueuedAttendanceItem,
-  subscribeToSyncQueue,
-  enqueueAttendanceItem,
-  retryFailedItem,
-  drainAttendanceQueue,
-} from '../services/attendanceSyncQueue';
-import {
   CheckCircle,
   Clock,
   BookOpen,
@@ -37,9 +30,7 @@ import {
   Radio,
   Loader2,
   AlertCircle,
-  Shield,
-  CloudOff,
-  RefreshCw
+  Shield
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -48,8 +39,6 @@ export const StudentDashboard: React.FC = () => {
   const [courses, setCourses] = useState<any[]>([]);
   const [attendanceHistory, setAttendanceHistory] = useState<any[]>([]);
   const [activeSessions, setActiveSessions] = useState<any[]>([]);
-  const [syncQueue, setSyncQueue] = useState<QueuedAttendanceItem[]>([]);
-  const [isManualSyncing, setIsManualSyncing] = useState(false);
   const [loading, setLoading] = useState<string | null>(null); // courseId being loaded
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
@@ -140,33 +129,6 @@ export const StudentDashboard: React.FC = () => {
     };
   }, [on, off, refreshSessions]);
 
-  // Eventual Consistency: Subscribe to client-side attendance outbox queue
-  useEffect(() => {
-    const unsubscribe = subscribeToSyncQueue((queue) => {
-      setSyncQueue(queue);
-    });
-    return unsubscribe;
-  }, []);
-
-  // Listen to background sync settlement to refresh server attendance records
-  useEffect(() => {
-    const handleSynced = async () => {
-      if (!user) return;
-      const isOnline = await checkServerHealth();
-      if (isOnline) {
-        const records = await getAttendanceRecordsApi({ studentId: user.id });
-        if (records && Array.isArray(records)) {
-          setAttendanceHistory(records);
-        }
-      }
-    };
-
-    window.addEventListener('smartattend:attendance-synced', handleSynced);
-    return () => {
-      window.removeEventListener('smartattend:attendance-synced', handleSynced);
-    };
-  }, [user]);
-
   const handleMarkAttendance = async (courseId: string) => {
     if (!user || !deviceFingerprint) return;
 
@@ -175,10 +137,9 @@ export const StudentDashboard: React.FC = () => {
     try {
       // Get the student's GPS position
       const position = await getCurrentPosition();
-      const course = courses.find((c: any) => c.id === courseId);
 
-      // Attempt live backend API call first if network appears available
-      const isOnline = typeof navigator !== 'undefined' && navigator.onLine && (await checkServerHealth());
+      // Check server connectivity and attempt live backend API call
+      const isOnline = await checkServerHealth();
       if (isOnline) {
         const apiResult = await markAttendanceApi(
           courseId,
@@ -191,52 +152,28 @@ export const StudentDashboard: React.FC = () => {
           const dist = Math.round(apiResult.distance || 0);
           toast.success(`Attendance marked successfully! (${dist}m from lecturer — GPS Verified)`);
           const records = await getAttendanceRecordsApi({ studentId: user.id });
-          if (records) setAttendanceHistory(records);
+          if (records && Array.isArray(records)) {
+            setAttendanceHistory(records);
+          }
+          // Also record locally in mock data
+          markAttendance(
+            user.id,
+            courseId,
+            position.latitude,
+            position.longitude,
+            deviceFingerprint
+          );
           setLoading(null);
           return;
-        } else if (
-          apiResult.error &&
-          (apiResult.error.toLowerCase().includes('radius') ||
-            apiResult.error.toLowerCase().includes('distance') ||
-            apiResult.error.toLowerCase().includes('device'))
-        ) {
-          // Explicit domain failure (e.g. student is genuinely out of classroom radius or wrong hardware binding)
-          toast.error(apiResult.error);
+        } else {
+          toast.error(apiResult.error || 'Failed to mark attendance');
           setLoading(null);
           return;
         }
       }
 
-      // Offline / Flaky Network Path: Eventual Consistency Outbox Queue
-      enqueueAttendanceItem({
-        courseId,
-        courseName: course?.courseName,
-        courseCode: course?.courseCode,
-        latitude: position.latitude,
-        longitude: position.longitude,
-        accuracy: position.accuracy,
-      });
-
-      // Optimistic attendance record
-      const todayStr = new Date().toISOString().split('T')[0];
-      const optimisticRecord = {
-        id: `offline_${Date.now()}`,
-        courseId,
-        studentId: user.id,
-        date: todayStr,
-        status: 'present',
-        timestamp: new Date().toISOString(),
-        course: { courseName: course?.courseName, courseCode: course?.courseCode },
-        isQueued: true,
-      };
-
-      setAttendanceHistory((prev) => [
-        optimisticRecord,
-        ...prev.filter((r) => !(r.courseId === courseId && (r.date === todayStr || r.date?.startsWith(todayStr)))),
-      ]);
-
-      // Record in local storage fallback
-      markAttendance(
+      // Local fallback if server is unreachable
+      const result = markAttendance(
         user.id,
         courseId,
         position.latitude,
@@ -244,10 +181,14 @@ export const StudentDashboard: React.FC = () => {
         deviceFingerprint
       );
 
-      toast.info(
-        'Offline Attendance Captured! 📦 GPS check-in saved to local outbox. It will automatically reconcile with the university server once connected.',
-        { duration: 5500, icon: '⏳' }
-      );
+      if (result.success) {
+        const dist = Math.round(result.distance || 0);
+        toast.success(`Attendance marked successfully! (${dist}m from lecturer — GPS Verified)`);
+        const history = getStudentAttendance(user.id);
+        setAttendanceHistory(history);
+      } else {
+        toast.error(result.error || 'Failed to mark attendance');
+      }
     } catch (err: any) {
       toast.error(err.message || 'Failed to get your location. Please enable GPS.');
     } finally {
@@ -272,22 +213,14 @@ export const StudentDashboard: React.FC = () => {
     return Math.round((studentAttendances.length / totalSessions) * 100);
   };
 
-  const getQueuedItemForCourse = (courseId: string) => {
-    const today = new Date().toISOString().split('T')[0];
-    return syncQueue.find(
-      (q) => q.courseId === courseId && q.capturedAt.startsWith(today)
-    );
-  };
-
   const isTodayMarked = (courseId: string) => {
     const today = new Date().toISOString().split('T')[0];
-    const inHistory = attendanceHistory.some(
-      (a) => a.courseId === courseId && (a.date === today || a.date?.startsWith(today)) && a.status === 'present'
+    return attendanceHistory.some(
+      (a: any) =>
+        a.courseId === courseId &&
+        (a.date === today || (typeof a.date === 'string' && a.date.startsWith(today))) &&
+        a.status === 'present'
     );
-    const inQueue = syncQueue.some(
-      (q) => q.courseId === courseId && q.capturedAt.startsWith(today) && q.status !== 'failed'
-    );
-    return inHistory || inQueue;
   };
 
   const getSessionForCourse = (courseId: string) => {
@@ -296,44 +229,11 @@ export const StudentDashboard: React.FC = () => {
 
   // Render the attendance action button for a course card
   const renderAttendanceAction = (course: any) => {
-    const queued = getQueuedItemForCourse(course.id);
-
-    if (queued) {
-      if (queued.status === 'failed') {
-        return (
-          <div className="flex items-center justify-between gap-2 px-3 py-2 bg-red-50 text-red-800 dark:bg-red-950/60 dark:text-red-300 border border-red-300 dark:border-red-800 rounded-xl text-xs">
-            <div className="flex items-center gap-1.5 min-w-0">
-              <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
-              <span className="truncate font-semibold">{queued.lastError || 'Sync failed'}</span>
-            </div>
-            <button
-              onClick={() => retryFailedItem(queued.clientQueueId)}
-              className="px-2.5 py-1 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition cursor-pointer flex-shrink-0"
-            >
-              Retry
-            </button>
-          </div>
-        );
-      }
-
-      return (
-        <div className="flex items-center justify-between gap-2 px-3 py-2 bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-200 border border-amber-300 dark:border-amber-700 rounded-xl text-xs">
-          <div className="flex items-center gap-2">
-            <Loader2 className="w-4 h-4 animate-spin text-amber-600 flex-shrink-0" />
-            <span className="font-bold">Offline Saved — Syncing...</span>
-          </div>
-          <span className="px-2 py-0.5 bg-amber-200 dark:bg-amber-900 text-amber-950 dark:text-amber-100 rounded-full font-bold text-[10px]">
-            Outbox
-          </span>
-        </div>
-      );
-    }
-
     if (isTodayMarked(course.id)) {
       return (
         <div className="flex items-center gap-2 px-4 py-2.5 bg-emerald-50 text-emerald-800 dark:bg-emerald-950/90 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800 rounded-xl">
           <CheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-          <span className="text-sm font-semibold">Marked for today (Verified ✅)</span>
+          <span className="text-sm font-semibold">Marked for today (GPS Verified ✅)</span>
         </div>
       );
     }
@@ -412,54 +312,6 @@ export const StudentDashboard: React.FC = () => {
             </p>
           </div>
 
-          {/* Eventual Consistency: Offline Outbox Banner */}
-          {syncQueue.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mb-6 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-300 dark:border-amber-800 rounded-2xl p-4 sm:p-5 shadow-sm"
-            >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-start gap-3.5">
-                  <div className="p-2.5 bg-amber-500/20 text-amber-800 dark:text-amber-300 rounded-xl flex-shrink-0">
-                    <CloudOff className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-bold text-amber-950 dark:text-amber-200">
-                        Offline Outbox Queue ({syncQueue.length} check-in{syncQueue.length !== 1 ? 's' : ''})
-                      </h3>
-                      <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 dark:bg-amber-900 dark:text-amber-200">
-                        Eventual Consistency
-                      </span>
-                    </div>
-                    <p className="text-xs text-amber-800/90 dark:text-amber-300/80 mt-1 max-w-2xl">
-                      Attendance records were captured offline with high-precision GPS. They are queued safely in your browser storage and will automatically reconcile with the university server once network connectivity is restored.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 self-start sm:self-center">
-                  <button
-                    onClick={async () => {
-                      setIsManualSyncing(true);
-                      const res = await drainAttendanceQueue();
-                      setIsManualSyncing(false);
-                      if (res.attempted === 0) {
-                        toast.info('No pending items to sync or currently offline.');
-                      }
-                    }}
-                    disabled={isManualSyncing}
-                    className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer disabled:opacity-50 shadow-sm"
-                  >
-                    <RefreshCw className={`w-3.5 h-3.5 ${isManualSyncing ? 'animate-spin' : ''}`} />
-                    {isManualSyncing ? 'Reconciling...' : 'Sync Outbox Now'}
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          )}
-
           {/* Low Attendance / Exam Eligibility Warning Banner */}
           {(() => {
             const atRisk = courses.filter(c => {
@@ -521,23 +373,10 @@ export const StudentDashboard: React.FC = () => {
                       <p className="text-emerald-100 text-xs font-medium">{session.course?.courseCode} • {session.lecturer?.name}</p>
                     </div>
                     {isTodayMarked(session.courseId) ? (
-                      (() => {
-                        const queued = getQueuedItemForCourse(session.courseId);
-                        if (queued) {
-                          return (
-                            <div className="flex items-center gap-1.5 bg-amber-400/30 text-amber-100 border border-amber-300/40 px-3 py-1.5 rounded-xl font-bold text-xs">
-                              <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-200" />
-                              <span>Syncing...</span>
-                            </div>
-                          );
-                        }
-                        return (
-                          <div className="flex items-center gap-1.5 bg-emerald-400/30 text-emerald-100 border border-emerald-300/40 px-3 py-1.5 rounded-xl font-bold text-xs">
-                            <CheckCircle className="w-3.5 h-3.5 text-emerald-200" />
-                            <span>Present</span>
-                          </div>
-                        );
-                      })()
+                      <div className="flex items-center gap-1.5 bg-emerald-400/30 text-emerald-100 border border-emerald-300/40 px-3 py-1.5 rounded-xl font-bold text-xs">
+                        <CheckCircle className="w-3.5 h-3.5 text-emerald-200" />
+                        <span>Present</span>
+                      </div>
                     ) : (
                       <motion.button
                         whileHover={{ scale: 1.05 }}
@@ -810,12 +649,7 @@ export const StudentDashboard: React.FC = () => {
                                 </div>
                               </td>
                               <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
-                                {record.isQueued || syncQueue.some((q) => q.courseId === record.courseId && q.capturedAt.startsWith(record.date)) ? (
-                                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
-                                    <Loader2 className="w-3 h-3 animate-spin text-amber-600" />
-                                    Syncing (Outbox)
-                                  </span>
-                                ) : record.status === 'present' ? (
+                                {record.status === 'present' ? (
                                   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
                                     <CheckCircle className="w-3 h-3" />
                                     Present

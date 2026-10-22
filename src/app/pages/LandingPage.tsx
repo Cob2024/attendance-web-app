@@ -305,8 +305,8 @@ export const LandingPage: React.FC = () => {
               },
               {
                 icon: Zap,
-                title: "Eventual Consistency Sync",
-                desc: "Attendance is stored in an offline outbox if campus Wi-Fi drops, and reconciles idempotently with the server upon reconnection.",
+                title: "Sub-Second 1-Tap Marking",
+                desc: "Students check in instantly with a single touch. Fast cryptographic verification avoids lecture hall bottlenecks.",
                 accentBorder: "border-l-4 border-l-[#FFC72C] dark:border-l-amber-400",
                 iconBg: "bg-amber-500/15 text-amber-700 dark:bg-amber-950/60 dark:text-[#FFC72C]"
               },
@@ -487,7 +487,7 @@ export const LandingPage: React.FC = () => {
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-[#00205B] dark:text-blue-400 flex-shrink-0" />
-                    <span>Offline Outbox with Auto-Sync</span>
+                    <span>Real-Time Course Roster & History</span>
                   </li>
                 </ul>
               </div>
