@@ -352,6 +352,150 @@ attendanceRouter.post('/mark', authenticateToken, requireRole(['student']), asyn
   }
 });
 
+// ============================================================
+// Eventual Consistency: Batch Offline Sync Endpoint (Student)
+// ============================================================
+attendanceRouter.post('/sync', authenticateToken, requireRole(['student']), async (req: AuthRequest, res) => {
+  try {
+    const { items } = req.body;
+    const studentId = req.user!.id;
+
+    if (!Array.isArray(items)) {
+      return res.status(400).json({ success: false, error: 'Items array is required for attendance sync' });
+    }
+
+    if (items.length === 0) {
+      return res.json({ success: true, results: [] });
+    }
+
+    // Auto-close expired sessions before processing
+    await autoCloseExpiredSessions();
+
+    const results = [];
+
+    for (const item of items) {
+      const { clientQueueId, courseId, latitude, longitude, accuracy, capturedAt } = item;
+
+      if (!courseId || latitude === undefined || longitude === undefined) {
+        results.push({
+          clientQueueId: clientQueueId || null,
+          status: 'rejected',
+          error: 'Missing required fields (courseId, latitude, longitude)',
+        });
+        continue;
+      }
+
+      // Check for active session OR matching session during capturedAt time
+      const captureDate = capturedAt ? new Date(capturedAt) : new Date();
+      const todayStr = captureDate.toISOString().split('T')[0];
+
+      // Find active session or session that was open during capturedAt
+      let session = await prisma.attendanceSession.findFirst({
+        where: { courseId, isActive: true },
+      });
+
+      // If no active session, find if there was a session today created around capturedAt
+      if (!session && capturedAt) {
+        session = await prisma.attendanceSession.findFirst({
+          where: {
+            courseId,
+            createdAt: { lte: captureDate },
+            OR: [
+              { endedAt: { gte: captureDate } },
+              { expiresAt: { gte: captureDate } },
+            ],
+          },
+        });
+      }
+
+      if (!session) {
+        results.push({
+          clientQueueId: clientQueueId || null,
+          status: 'rejected',
+          error: 'No active or matching attendance session found for this course and time',
+        });
+        continue;
+      }
+
+      // Geofence calculation with adaptive indoor buffer
+      const distance = calculateDistanceMeters(
+        parseFloat(latitude),
+        parseFloat(longitude),
+        session.latitude,
+        session.longitude
+      );
+
+      const accuracyBuffer = Math.min(Math.max(0, parseFloat(accuracy) || 0), 15);
+      const maxAllowedDistance = session.radiusMeters + accuracyBuffer;
+
+      if (distance > maxAllowedDistance) {
+        results.push({
+          clientQueueId: clientQueueId || null,
+          status: 'rejected',
+          error: `Out of range. Distance: ${Math.round(distance)}m (Max allowed: ${session.radiusMeters}m)`,
+        });
+        continue;
+      }
+
+      // Upsert record: idempotent write that resolves any existing 'absent' mark
+      const record = await prisma.attendanceRecord.upsert({
+        where: {
+          studentId_courseId_date: {
+            studentId,
+            courseId,
+            date: todayStr,
+          },
+        },
+        update: {
+          status: 'present',
+          timestamp: captureDate,
+          latitude: parseFloat(latitude),
+          longitude: parseFloat(longitude),
+          distance,
+          sessionId: session.id,
+        },
+        create: {
+          studentId,
+          courseId,
+          sessionId: session.id,
+          date: todayStr,
+          status: 'present',
+          latitude: parseFloat(latitude),
+          longitude: parseFloat(longitude),
+          distance,
+        },
+      });
+
+      // Emit real-time event for lecturer screen
+      const studentInfo = await prisma.user.findUnique({
+        where: { id: studentId },
+        select: { name: true, studentId: true },
+      });
+
+      getIO().to(`course:${courseId}`).emit('attendance:marked', {
+        courseId,
+        studentName: studentInfo?.name || 'Unknown',
+        studentIdNumber: studentInfo?.studentId || '',
+        distance: Math.round(distance),
+        timestamp: captureDate.toISOString(),
+        isSynced: true,
+      });
+
+      results.push({
+        clientQueueId: clientQueueId || null,
+        status: 'synced',
+        recordId: record.id,
+        distance: Math.round(distance),
+      });
+    }
+
+    return res.json({ success: true, results });
+  } catch (err: any) {
+    console.error('Attendance sync error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to process attendance sync' });
+  }
+});
+
 // Manual Attendance Mark (Lecturer / Admin)
 attendanceRouter.post('/manual', authenticateToken, requireRole(['lecturer', 'admin']), async (req: AuthRequest, res) => {
   try {

@@ -243,6 +243,26 @@ export const markAttendanceApi = async (
   }
 };
 
+export interface AttendanceSyncItemPayload {
+  clientQueueId: string;
+  courseId: string;
+  latitude: number;
+  longitude: number;
+  accuracy?: number;
+  capturedAt: string;
+}
+
+export const syncAttendanceQueueApi = async (items: AttendanceSyncItemPayload[]) => {
+  try {
+    return await apiFetch('/attendance/sync', {
+      method: 'POST',
+      body: JSON.stringify({ items }),
+    });
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+};
+
 export const manualMarkAttendanceApi = async (
   studentId: string,
   courseId: string,
