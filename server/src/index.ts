@@ -1,10 +1,10 @@
+import './env.js';
 import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
 import { setIO } from './socket.js';
 import { authRouter } from './routes/authRoutes.js';
@@ -13,14 +13,6 @@ import { attendanceRouter, autoCloseExpiredSessions } from './routes/attendanceR
 import { adminRouter } from './routes/adminRoutes.js';
 import { enrollmentRouter } from './routes/enrollmentRoutes.js';
 import { notificationRouter } from './routes/notificationRoutes.js';
-
-dotenv.config();
-
-// Security: Crash early if JWT_SECRET is not set
-if (!process.env.JWT_SECRET) {
-  console.error('❌ FATAL: JWT_SECRET environment variable is not set. Server cannot start.');
-  process.exit(1);
-}
 
 const app = express();
 const httpServer = createServer(app);

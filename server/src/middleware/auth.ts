@@ -1,14 +1,8 @@
+import '../env.js';
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
-// Security: JWT_SECRET must be set via environment variable.
-// The server MUST NOT start with a hardcoded or fallback secret.
-if (!process.env.JWT_SECRET) {
-  console.error('❌ FATAL: JWT_SECRET environment variable is not set. Server cannot start securely.');
-  process.exit(1);
-}
-
-export const JWT_SECRET: string = process.env.JWT_SECRET;
+export const JWT_SECRET: string = process.env.JWT_SECRET!;
 
 export interface AuthRequest extends Request {
   user?: {
