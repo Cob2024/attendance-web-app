@@ -138,6 +138,9 @@ export const StudentDashboard: React.FC = () => {
       // Get the student's GPS position
       const position = await getCurrentPosition();
 
+      const clientMarkTime = new Date().toISOString();
+      const todayDateStr = clientMarkTime.split('T')[0];
+
       // Check server connectivity and attempt live backend API call
       const isOnline = await checkServerHealth();
       if (isOnline) {
@@ -145,24 +148,29 @@ export const StudentDashboard: React.FC = () => {
           courseId,
           position.latitude,
           position.longitude,
-          position.accuracy
+          position.accuracy,
+          clientMarkTime,
+          todayDateStr
         );
 
         if (apiResult.success) {
           const dist = Math.round(apiResult.distance || 0);
           toast.success(`Attendance marked successfully! (${dist}m from lecturer — GPS Verified)`);
-          const records = await getAttendanceRecordsApi({ studentId: user.id });
-          if (records && Array.isArray(records)) {
-            setAttendanceHistory(records);
-          }
-          // Also record locally in mock data
+          // Also record locally in mock data with exact client timestamp
           markAttendance(
             user.id,
             courseId,
             position.latitude,
             position.longitude,
-            deviceFingerprint
+            deviceFingerprint,
+            clientMarkTime
           );
+          const records = await getAttendanceRecordsApi({ studentId: user.id });
+          if (records && Array.isArray(records) && records.length > 0) {
+            setAttendanceHistory(records);
+          } else {
+            setAttendanceHistory(getStudentAttendance(user.id));
+          }
           setLoading(null);
           return;
         } else {
@@ -178,7 +186,8 @@ export const StudentDashboard: React.FC = () => {
         courseId,
         position.latitude,
         position.longitude,
-        deviceFingerprint
+        deviceFingerprint,
+        clientMarkTime
       );
 
       if (result.success) {
@@ -325,19 +334,17 @@ export const StudentDashboard: React.FC = () => {
             if (atRisk.length === 0) return null;
 
             return (
-              <div className="mb-6 bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-amber-500/5 border-l-4 border-amber-500 rounded-xl p-4 sm:p-5 shadow-sm">
-                <div className="flex items-start gap-3">
-                  <div className="p-2 bg-amber-500/20 rounded-lg text-amber-700 dark:text-amber-300 flex-shrink-0">
-                    <AlertCircle className="w-5 h-5" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-bold text-amber-900 dark:text-amber-200">
-                      Attendance Notice: 75% Exam Eligibility Threshold
-                    </h3>
-                    <p className="text-xs sm:text-sm text-amber-800/90 dark:text-amber-300/80 mt-1">
-                      You are currently below the required 75% threshold in <span className="font-semibold">{atRisk.map(c => c.courseCode).join(', ')}</span>. Under university regulations, minimum 75% attendance is required to sit for end-of-semester examinations.
-                    </p>
-                  </div>
+              <div role="alert" className="alert alert-warning alert-soft mb-6 p-4 rounded-2xl flex items-start gap-3 shadow-xs">
+                <div className="p-1.5 bg-amber-500/20 text-amber-700 dark:text-amber-300 rounded-lg flex-shrink-0">
+                  <AlertCircle className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-sm font-bold text-amber-900 dark:text-amber-200">
+                    Attendance Notice: 75% Exam Eligibility Threshold
+                  </h3>
+                  <p className="text-xs sm:text-sm text-amber-800/90 dark:text-amber-300/80 mt-1">
+                    You are currently below the required 75% threshold in <span className="font-semibold">{atRisk.map(c => c.courseCode).join(', ')}</span>. Under university regulations, minimum 75% attendance is required to sit for end-of-semester examinations.
+                  </p>
                 </div>
               </div>
             );
@@ -407,26 +414,26 @@ export const StudentDashboard: React.FC = () => {
             /* ===== MY COURSES VIEW ===== */
             <div className="mb-6 lg:mb-8">
               {/* Stats Summary */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-6">
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-                  <p className="text-xs text-gray-500 mb-1">Total Courses</p>
-                  <p className="text-2xl font-bold text-gray-900">{courses.length}</p>
+              <div className="stats stats-vertical sm:stats-horizontal shadow-sm border border-slate-200 dark:border-slate-800 w-full bg-white dark:bg-slate-900 mb-6 rounded-2xl">
+                <div className="stat">
+                  <div className="stat-title text-xs text-slate-500">Total Courses</div>
+                  <div className="stat-value text-2xl font-bold text-slate-900 dark:text-white">{courses.length}</div>
                 </div>
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-                  <p className="text-xs text-gray-500 mb-1">Active Sessions</p>
-                  <p className="text-2xl font-bold text-emerald-600">{activeSessions.length}</p>
+                <div className="stat">
+                  <div className="stat-title text-xs text-slate-500">Active Sessions</div>
+                  <div className="stat-value text-2xl font-bold text-emerald-600">{activeSessions.length}</div>
                 </div>
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-                  <p className="text-xs text-gray-500 mb-1">Total Attended</p>
-                  <p className="text-2xl font-bold text-gray-900">{attendanceHistory.filter(a => a.status === 'present').length}</p>
+                <div className="stat">
+                  <div className="stat-title text-xs text-slate-500">Total Attended</div>
+                  <div className="stat-value text-2xl font-bold text-slate-900 dark:text-white">{attendanceHistory.filter(a => a.status === 'present').length}</div>
                 </div>
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-                  <p className="text-xs text-gray-500 mb-1">Overall Attendance</p>
-                  <p className="text-2xl font-bold text-ttu-navy">
+                <div className="stat">
+                  <div className="stat-title text-xs text-slate-500">Overall Attendance</div>
+                  <div className="stat-value text-2xl font-bold text-[#00205B] dark:text-[#FFC72C]">
                     {courses.length > 0
                       ? Math.round(courses.reduce((sum, c) => sum + getAttendancePercentage(c.id), 0) / courses.length)
                       : 0}%
-                  </p>
+                  </div>
                 </div>
               </div>
 
@@ -611,58 +618,52 @@ export const StudentDashboard: React.FC = () => {
 
               {/* Attendance History */}
               <div>
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">Recent Attendance</h2>
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Recent Attendance</h2>
+                <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
                   {attendanceHistory.length > 0 ? (
                     <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead className="bg-gray-50 border-b border-gray-200">
-                          <tr>
-                            <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Date
-                            </th>
-                            <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Course
-                            </th>
-                            <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Status
-                            </th>
-                            <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
-                              Time
-                            </th>
+                      <table className="table table-zebra w-full">
+                        <thead>
+                          <tr className="bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">
+                            <th>Date</th>
+                            <th>Course</th>
+                            <th>Status</th>
+                            <th className="hidden sm:table-cell">Time</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-200">
+                        <tbody>
                           {attendanceHistory.slice(0, 10).map((record, index) => (
-                            <tr key={index} className="hover:bg-gray-50">
-                              <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            <tr key={index} className="hover">
+                              <td className="whitespace-nowrap text-sm font-medium">
                                 {record.date ? new Date(record.date.includes('T') ? record.date : `${record.date}T00:00:00`).toLocaleDateString() : '—'}
                               </td>
-                              <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
+                              <td className="whitespace-nowrap">
                                 <div>
-                                  <div className="text-sm font-medium text-gray-900">
+                                  <div className="text-sm font-bold text-slate-900 dark:text-white">
                                     {record.course?.courseName || courses.find((c: any) => c.id === record.courseId)?.courseName || 'Course'}
                                   </div>
-                                  <div className="text-sm text-gray-500">
+                                  <div className="text-xs text-slate-500">
                                     {record.course?.courseCode || courses.find((c: any) => c.id === record.courseId)?.courseCode || ''}
                                   </div>
                                 </div>
                               </td>
-                              <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
+                              <td className="whitespace-nowrap">
                                 {record.status === 'present' ? (
-                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                                  <span className="badge badge-success badge-soft gap-1 text-xs font-bold">
                                     <CheckCircle className="w-3 h-3" />
                                     Present
                                   </span>
                                 ) : (
-                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-300">
+                                  <span className="badge badge-error badge-soft gap-1 text-xs font-bold">
                                     <AlertCircle className="w-3 h-3" />
                                     Absent
                                   </span>
                                 )}
                               </td>
-                              <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-500 hidden sm:table-cell">
-                                {new Date(record.timestamp).toLocaleTimeString()}
+                              <td className="whitespace-nowrap text-sm text-slate-500 hidden sm:table-cell">
+                                {record.status === 'present' && record.timestamp
+                                  ? new Date(record.timestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })
+                                  : '—'}
                               </td>
                             </tr>
                           ))}
@@ -671,8 +672,8 @@ export const StudentDashboard: React.FC = () => {
                     </div>
                   ) : (
                     <div className="p-8 text-center">
-                      <Clock className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                      <p className="text-gray-500">No attendance records yet</p>
+                      <Clock className="w-12 h-12 text-slate-300 dark:text-slate-700 mx-auto mb-3" />
+                      <p className="text-slate-500">No attendance records yet</p>
                     </div>
                   )}
                 </div>

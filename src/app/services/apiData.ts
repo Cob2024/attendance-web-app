@@ -231,12 +231,23 @@ export const markAttendanceApi = async (
   courseId: string,
   latitude: number,
   longitude: number,
-  accuracy?: number
+  accuracy?: number,
+  timestamp?: string,
+  date?: string
 ) => {
   try {
+    const clientTimestamp = timestamp || new Date().toISOString();
+    const clientDate = date || clientTimestamp.split('T')[0];
     return await apiFetch('/attendance/mark', {
       method: 'POST',
-      body: JSON.stringify({ courseId, latitude, longitude, accuracy }),
+      body: JSON.stringify({
+        courseId,
+        latitude,
+        longitude,
+        accuracy,
+        timestamp: clientTimestamp,
+        date: clientDate,
+      }),
     });
   } catch (err: any) {
     return { success: false, error: err.message };

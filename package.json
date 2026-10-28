@@ -34,6 +34,7 @@
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "4.7.0",
     "concurrently": "^10.0.5",
+    "daisyui": "^5.7.50",
     "tailwindcss": "4.1.12",
     "vite": "^6.4.1"
   }

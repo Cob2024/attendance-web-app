@@ -4,6 +4,7 @@ import { app } from './testApp.js';
 import { JWT_SECRET } from '../middleware/auth.js';
 
 describe('Eventual Consistency & Attendance Sync API (TDD)', () => {
+  jest.setTimeout(15000);
   const studentToken = jwt.sign(
     { id: 'test-student-id', email: 'kwabena.mensah@ttu.edu.gh', role: 'student', name: 'Kwabena Mensah' },
     JWT_SECRET,

@@ -301,9 +301,11 @@ attendanceRouter.post('/mark', authenticateToken, requireRole(['student']), asyn
       });
     }
 
-    const todayStr = new Date().toISOString().split('T')[0];
+    const clientTimestamp = req.body.timestamp ? new Date(req.body.timestamp) : new Date();
+    const now = !isNaN(clientTimestamp.getTime()) ? clientTimestamp : new Date();
+    const todayStr = req.body.date || now.toISOString().split('T')[0];
 
-    // Upsert record
+    // Upsert record with exact verification timestamp
     const record = await prisma.attendanceRecord.upsert({
       where: {
         studentId_courseId_date: {
@@ -314,7 +316,7 @@ attendanceRouter.post('/mark', authenticateToken, requireRole(['student']), asyn
       },
       update: {
         status: 'present',
-        timestamp: new Date(),
+        timestamp: now,
         latitude: parseFloat(latitude),
         longitude: parseFloat(longitude),
         distance,
@@ -326,13 +328,14 @@ attendanceRouter.post('/mark', authenticateToken, requireRole(['student']), asyn
         sessionId: session.id,
         date: todayStr,
         status: 'present',
+        timestamp: now,
         latitude: parseFloat(latitude),
         longitude: parseFloat(longitude),
         distance,
       },
     });
 
-    // Emit real-time event: attendance marked
+    // Emit real-time event: attendance marked with exact timestamp
     const studentInfo = await prisma.user.findUnique({
       where: { id: studentId },
       select: { name: true, studentId: true },
@@ -342,7 +345,7 @@ attendanceRouter.post('/mark', authenticateToken, requireRole(['student']), asyn
       studentName: studentInfo?.name || 'Unknown',
       studentIdNumber: studentInfo?.studentId || '',
       distance: Math.round(distance),
-      timestamp: new Date().toISOString(),
+      timestamp: now.toISOString(),
     });
 
     return res.json({ success: true, record, distance });
@@ -460,6 +463,7 @@ attendanceRouter.post('/sync', authenticateToken, requireRole(['student']), asyn
           sessionId: session.id,
           date: todayStr,
           status: 'present',
+          timestamp: captureDate,
           latitude: parseFloat(latitude),
           longitude: parseFloat(longitude),
           distance,

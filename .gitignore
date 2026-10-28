@@ -30,3 +30,7 @@ server/prisma/*.db-journal
 server/dump.js
 server/backups/
 *.tsbuildinfo
+
+# Tool cache
+.adal/
+

@@ -27,14 +27,14 @@ export const NotFound: React.FC = () => {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           <button
             onClick={() => navigate(-1)}
-            className="w-full sm:w-auto px-5 py-2.5 border border-gray-300 bg-white text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+            className="btn btn-outline rounded-xl w-full sm:w-auto font-medium gap-2"
           >
             <ArrowLeft className="w-4 h-4" />
             Go Back
           </button>
           <button
             onClick={() => navigate('/login')}
-            className="w-full sm:w-auto px-5 py-2.5 bg-ttu-navy text-white rounded-lg font-medium hover:bg-ttu-navy-dark transition-colors flex items-center justify-center gap-2"
+            className="btn btn-primary rounded-xl w-full sm:w-auto text-white font-bold gap-2"
           >
             <Home className="w-4 h-4" />
             Go to Login

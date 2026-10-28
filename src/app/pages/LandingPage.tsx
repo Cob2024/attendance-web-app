@@ -94,7 +94,7 @@ export const LandingPage: React.FC = () => {
                 <span className="text-lg sm:text-xl font-black text-[#00205B] dark:text-white tracking-tight leading-none">
                   SmartAttend
                 </span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-800 dark:text-[#FFC72C] border border-amber-500/30">
+                <span className="badge badge-warning badge-soft badge-xs sm:badge-sm font-bold">
                   v2.5
                 </span>
               </div>
@@ -126,15 +126,15 @@ export const LandingPage: React.FC = () => {
               whileHover={{ scale: 1.04 }}
               whileTap={{ scale: 0.96 }}
               onClick={() => navigate('/login')}
-              className="px-3.5 py-2 text-xs sm:text-sm font-bold text-[#00205B] dark:text-slate-200 hover:text-amber-600 dark:hover:text-[#FFC72C] transition-colors cursor-pointer"
+              className="btn btn-ghost btn-sm text-xs sm:text-sm font-bold text-[#00205B] dark:text-slate-200 hover:text-amber-600 dark:hover:text-[#FFC72C]"
             >
               Sign In
             </motion.button>
             <motion.button
-              whileHover={{ scale: 1.04, y: -1, boxShadow: '0 8px 20px -4px rgba(0, 32, 91, 0.3)' }}
+              whileHover={{ scale: 1.04, y: -1 }}
               whileTap={{ scale: 0.96 }}
               onClick={() => navigate('/login')}
-              className="px-4 py-2 bg-[#00205B] hover:bg-[#001744] text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-md flex items-center gap-1.5 cursor-pointer border border-[#FFC72C]/30"
+              className="btn btn-primary btn-sm text-xs sm:text-sm font-bold shadow-md gap-1.5 border border-[#FFC72C]/40"
             >
               <span>Access Portal</span>
               <ArrowRight className="w-3.5 h-3.5 text-[#FFC72C]" />
@@ -158,7 +158,7 @@ export const LandingPage: React.FC = () => {
           {/* Institutional Badge */}
           <motion.div
             variants={fadeInUp}
-            className="inline-flex items-center gap-2 bg-white dark:bg-slate-900 px-4 py-1.5 rounded-full border border-amber-500/30 text-xs font-semibold text-slate-800 dark:text-slate-200 shadow-sm"
+            className="badge badge-outline border-amber-500/30 gap-2 py-3 px-4 text-xs font-semibold shadow-xs bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm"
           >
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-emerald-500/30 animate-pulse" />
             <span className="font-bold text-[#00205B] dark:text-white">SmartAttend Cloud</span>
@@ -185,10 +185,10 @@ export const LandingPage: React.FC = () => {
           {/* Action Buttons */}
           <motion.div variants={fadeInUp} className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
             <motion.button
-              whileHover={{ scale: 1.03, y: -2, boxShadow: '0 14px 28px -6px rgba(0, 32, 91, 0.35)' }}
+              whileHover={{ scale: 1.03, y: -2 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => navigate('/login')}
-              className="w-full sm:w-auto px-7 py-3.5 bg-[#00205B] hover:bg-[#001744] text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-[#00205B]/25 flex items-center justify-center gap-2 cursor-pointer border border-[#FFC72C]/40 group"
+              className="btn btn-primary btn-md w-full sm:w-auto shadow-lg shadow-[#00205B]/25 gap-2 border border-[#FFC72C]/40 group"
             >
               <span>Launch SmartAttend Portal</span>
               <ArrowRight className="w-4 h-4 text-[#FFC72C] group-hover:translate-x-1 transition-transform" />
@@ -197,7 +197,7 @@ export const LandingPage: React.FC = () => {
               whileHover={{ scale: 1.02, y: -1 }}
               whileTap={{ scale: 0.98 }}
               href="#how-it-works"
-              className="w-full sm:w-auto px-6 py-3.5 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-800 rounded-xl font-semibold text-sm hover:border-[#00205B] dark:hover:border-[#FFC72C] transition-colors text-center shadow-xs"
+              className="btn btn-outline border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-[#00205B] dark:hover:border-[#FFC72C] btn-md w-full sm:w-auto shadow-xs"
             >
               See How It Works
             </motion.a>
@@ -275,7 +275,7 @@ export const LandingPage: React.FC = () => {
             transition={{ duration: 0.5 }}
             className="text-center space-y-2.5 max-w-2xl mx-auto"
           >
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 text-amber-700 dark:text-[#FFC72C] text-xs font-bold uppercase tracking-widest border border-amber-500/25">
+            <div className="badge badge-warning badge-soft gap-1.5 py-3 px-4 text-xs font-bold uppercase tracking-widest border border-amber-500/25">
               <Award className="w-3.5 h-3.5 text-[#FFC72C]" />
               <span>Built for TTU Excellence</span>
             </div>
@@ -339,7 +339,7 @@ export const LandingPage: React.FC = () => {
                 viewport={{ once: true, margin: '-40px' }}
                 transition={{ duration: 0.45, delay: i * 0.08 }}
                 whileHover={{ y: -6, scale: 1.015 }}
-                className={`p-6 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 ${feature.accentBorder} shadow-xs hover:shadow-lg transition-all space-y-3 group cursor-default`}
+                className={`card card-border p-6 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 ${feature.accentBorder} shadow-xs hover:shadow-lg transition-all space-y-3 group cursor-default`}
               >
                 <div className={`w-10 h-10 rounded-xl ${feature.iconBg} flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300`}>
                   <feature.icon className="w-5 h-5" />
@@ -461,14 +461,14 @@ export const LandingPage: React.FC = () => {
               viewport={{ once: true }}
               transition={{ duration: 0.5, ease: 'easeOut' }}
               whileHover={{ y: -8, scale: 1.01 }}
-              className="bg-slate-50 dark:bg-slate-900 p-7 sm:p-8 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col justify-between space-y-6 shadow-sm hover:shadow-xl transition-all"
+              className="card card-border bg-slate-50 dark:bg-slate-900 p-7 sm:p-8 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col justify-between space-y-6 shadow-sm hover:shadow-xl transition-all"
             >
               <div className="space-y-4">
                 <div className="w-12 h-12 bg-blue-500/10 border border-blue-500/20 text-[#00205B] dark:text-blue-300 rounded-xl flex items-center justify-center shadow-xs">
                   <GraduationCap className="w-6 h-6 text-[#00205B] dark:text-blue-400" />
                 </div>
                 <div>
-                  <span className="text-[11px] font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider">
+                  <span className="badge badge-primary badge-soft text-[11px] font-bold uppercase tracking-wider mb-1">
                     Student Access
                   </span>
                   <h3 className="text-xl font-bold text-slate-900 dark:text-white">Student Portal</h3>
@@ -495,7 +495,7 @@ export const LandingPage: React.FC = () => {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => navigate('/login')}
-                className="w-full py-3 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-[#00205B] dark:text-white border-2 border-[#00205B]/30 hover:border-[#00205B] rounded-xl font-bold text-sm transition-colors cursor-pointer shadow-xs"
+                className="btn btn-outline btn-primary w-full text-sm font-bold shadow-xs rounded-xl"
               >
                 Sign In as Student
               </motion.button>
@@ -508,9 +508,9 @@ export const LandingPage: React.FC = () => {
               viewport={{ once: true }}
               transition={{ duration: 0.5, ease: 'easeOut' }}
               whileHover={{ y: -8, scale: 1.01 }}
-              className="bg-slate-50 dark:bg-slate-900 p-7 sm:p-8 rounded-2xl border-2 border-[#00205B] dark:border-amber-400/60 flex flex-col justify-between space-y-6 shadow-md hover:shadow-2xl transition-all relative group"
+              className="card card-border bg-slate-50 dark:bg-slate-900 p-7 sm:p-8 rounded-2xl border-2 border-[#00205B] dark:border-amber-400/60 flex flex-col justify-between space-y-6 shadow-md hover:shadow-2xl transition-all relative group"
             >
-              <span className="absolute -top-3 right-6 bg-[#00205B] text-[#FFC72C] text-[10px] font-black uppercase tracking-wider px-3 py-0.5 rounded-full shadow-sm border border-[#FFC72C]/40">
+              <span className="badge badge-warning font-black uppercase tracking-wider px-3 py-1 shadow-sm border border-[#FFC72C]/40 absolute -top-3 right-6">
                 Faculty Hub
               </span>
               <div className="space-y-4">
@@ -518,7 +518,7 @@ export const LandingPage: React.FC = () => {
                   <UserCheck className="w-6 h-6 text-amber-700 dark:text-[#FFC72C]" />
                 </div>
                 <div>
-                  <span className="text-[11px] font-bold text-amber-700 dark:text-[#FFC72C] uppercase tracking-wider">
+                  <span className="badge badge-warning badge-soft text-[11px] font-bold uppercase tracking-wider mb-1">
                     Faculty Access
                   </span>
                   <h3 className="text-xl font-bold text-slate-900 dark:text-white">Lecturer Portal</h3>
@@ -545,7 +545,7 @@ export const LandingPage: React.FC = () => {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => navigate('/login')}
-                className="w-full py-3 bg-[#00205B] hover:bg-[#001744] text-[#FFC72C] rounded-xl font-bold text-sm transition-colors cursor-pointer shadow-md border border-[#FFC72C]/40 flex items-center justify-center gap-1.5"
+                className="btn btn-primary w-full text-[#FFC72C] text-sm font-bold shadow-md rounded-xl gap-2 border border-[#FFC72C]/40"
               >
                 <span>Sign In as Lecturer</span>
                 <ArrowRight className="w-4 h-4" />

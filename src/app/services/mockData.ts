@@ -277,7 +277,11 @@ export const getStudentAttendance = (studentId: string) => {
       ...a,
       course: courses.find((c: any) => c.id === a.courseId)
     }))
-    .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    .sort((a: any, b: any) => {
+      const timeB = new Date(b.timestamp || b.date).getTime();
+      const timeA = new Date(a.timestamp || a.date).getTime();
+      return timeB - timeA;
+    });
 };
 
 // Mark attendance — validates GPS location + device fingerprint
@@ -286,7 +290,8 @@ export const markAttendance = (
   courseId: string,
   studentLat: number,
   studentLng: number,
-  deviceFingerprint: string
+  deviceFingerprint: string,
+  clientTimestamp?: string
 ) => {
   // Validate active session exists
   const session = getActiveCode(courseId);
@@ -318,27 +323,34 @@ export const markAttendance = (
   }
 
   const attendance = JSON.parse(localStorage.getItem('attendance') || '[]');
-  const today = new Date().toISOString().split('T')[0];
+  const nowIso = clientTimestamp || new Date().toISOString();
+  const today = nowIso.split('T')[0];
 
-  // Check if already marked today
-  const alreadyMarked = attendance.some(
+  // Upsert record for today with exact timestamp
+  const existingIndex = attendance.findIndex(
     (a: any) => a.studentId === studentId && a.courseId === courseId && a.date === today
   );
 
-  if (alreadyMarked) {
-    return { success: false, error: 'Attendance already marked for today' };
+  if (existingIndex >= 0) {
+    attendance[existingIndex] = {
+      ...attendance[existingIndex],
+      status: 'present',
+      timestamp: nowIso,
+      distance: Math.round(distance),
+    };
+  } else {
+    const newAttendance = {
+      id: `a${Date.now()}`,
+      studentId,
+      courseId,
+      date: today,
+      status: 'present',
+      timestamp: nowIso,
+      distance: Math.round(distance),
+    };
+    attendance.push(newAttendance);
   }
 
-  const newAttendance = {
-    id: `a${Date.now()}`,
-    studentId,
-    courseId,
-    date: today,
-    status: 'present',
-    timestamp: new Date().toISOString()
-  };
-
-  attendance.push(newAttendance);
   localStorage.setItem('attendance', JSON.stringify(attendance));
 
   return { success: true, distance: Math.round(distance) };
@@ -1143,7 +1155,9 @@ export const exportAttendanceCSV = (courseId: string, startDate?: string, endDat
     r.student?.name || 'N/A',
     r.student?.studentId || 'N/A',
     r.status === 'present' ? 'Present' : 'Absent',
-    new Date(r.timestamp).toLocaleTimeString(),
+    r.status === 'present' && r.timestamp
+      ? new Date(r.timestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })
+      : '—',
   ]);
 
   const csvContent = [
@@ -1190,7 +1204,9 @@ export const exportAllAttendanceCSV = (programmeFilter?: string, levelFilter?: s
       student.name || 'N/A',
       student.studentId || 'N/A',
       record.status === 'present' ? 'Present' : 'Absent',
-      record.timestamp ? new Date(record.timestamp).toLocaleTimeString() : 'N/A',
+      record.status === 'present' && record.timestamp
+        ? new Date(record.timestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })
+        : '—',
     ];
   });
 

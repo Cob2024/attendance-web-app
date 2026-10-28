@@ -505,51 +505,35 @@ export const AdminDashboard: React.FC = () => {
               </div>
 
               {/* Stats Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8">
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-500">Total Courses</p>
-                      <p className="text-3xl font-bold text-gray-900 mt-1">{courses.length}</p>
-                    </div>
-                    <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                      <BookOpen className="w-6 h-6 text-blue-600" />
-                    </div>
+              <div className="stats stats-vertical sm:stats-horizontal shadow-sm border border-slate-200 dark:border-slate-800 w-full bg-white dark:bg-slate-900 rounded-2xl mb-8">
+                <div className="stat">
+                  <div className="stat-figure text-blue-600">
+                    <BookOpen className="w-8 h-8" />
                   </div>
+                  <div className="stat-title text-xs text-slate-500">Total Courses</div>
+                  <div className="stat-value text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mt-1">{courses.length}</div>
                 </div>
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-500">Total Lecturers</p>
-                      <p className="text-3xl font-bold text-gray-900 mt-1">{lecturers.length}</p>
-                    </div>
-                    <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                      <GraduationCap className="w-6 h-6 text-purple-600" />
-                    </div>
+                <div className="stat">
+                  <div className="stat-figure text-purple-600">
+                    <GraduationCap className="w-8 h-8" />
                   </div>
+                  <div className="stat-title text-xs text-slate-500">Total Lecturers</div>
+                  <div className="stat-value text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mt-1">{lecturers.length}</div>
                 </div>
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-500">Total Students</p>
-                      <p className="text-3xl font-bold text-gray-900 mt-1">{students.length}</p>
-                    </div>
-                    <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                      <Users className="w-6 h-6 text-green-600" />
-                    </div>
+                <div className="stat">
+                  <div className="stat-figure text-green-600">
+                    <Users className="w-8 h-8" />
                   </div>
+                  <div className="stat-title text-xs text-slate-500">Total Students</div>
+                  <div className="stat-value text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mt-1">{students.length}</div>
                 </div>
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-500">Programmes</p>
-                      <p className="text-3xl font-bold text-gray-900 mt-1">
-                        {new Set(courses.map((c: any) => c.programme)).size}
-                      </p>
-                    </div>
-                    <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
-                      <BarChart3 className="w-6 h-6 text-amber-600" />
-                    </div>
+                <div className="stat">
+                  <div className="stat-figure text-amber-600">
+                    <BarChart3 className="w-8 h-8" />
+                  </div>
+                  <div className="stat-title text-xs text-slate-500">Programmes</div>
+                  <div className="stat-value text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mt-1">
+                    {new Set(courses.map((c: any) => c.programme)).size}
                   </div>
                 </div>
               </div>
@@ -654,23 +638,23 @@ export const AdminDashboard: React.FC = () => {
                         </div>
 
                         <div className="overflow-x-auto max-h-[300px]">
-                          <table className="w-full text-left text-sm">
-                            <thead className="bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600 uppercase">
-                              <tr>
-                                <th className="px-3 py-2">Student</th>
-                                <th className="px-3 py-2">Course</th>
-                                <th className="px-3 py-2">Attendance</th>
-                                <th className="px-3 py-2">Status</th>
+                          <table className="table table-zebra w-full text-sm">
+                            <thead>
+                              <tr className="bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">
+                                <th>Student</th>
+                                <th>Course</th>
+                                <th>Attendance</th>
+                                <th>Status</th>
                               </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-100">
+                            <tbody>
                               {allRiskStudents.slice(0, 10).map((r, i) => (
-                                <tr key={i} className="hover:bg-gray-50">
-                                  <td className="px-3 py-2 font-medium text-gray-900">{r.student.name} ({r.student.studentId || 'ID N/A'})</td>
-                                  <td className="px-3 py-2 text-gray-600">{r.course.courseCode}</td>
-                                  <td className="px-3 py-2">{r.attended}/{r.totalSessions} ({r.pct}%)</td>
-                                  <td className="px-3 py-2">
-                                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${r.pct < 50 ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                                <tr key={i} className="hover">
+                                  <td className="font-bold text-slate-900 dark:text-white">{r.student.name} ({r.student.studentId || 'ID N/A'})</td>
+                                  <td className="text-slate-600 dark:text-slate-400">{r.course.courseCode}</td>
+                                  <td className="font-semibold">{r.attended}/{r.totalSessions} ({r.pct}%)</td>
+                                  <td>
+                                    <span className={`badge badge-soft text-xs font-bold ${r.pct < 50 ? 'badge-error' : 'badge-warning'}`}>
                                       {r.pct < 50 ? 'Critical' : 'Warning'}
                                     </span>
                                   </td>

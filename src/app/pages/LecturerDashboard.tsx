@@ -348,7 +348,9 @@ export const LecturerDashboard: React.FC = () => {
       record.student?.name || 'N/A',
       record.student?.studentId || 'N/A',
       record.status === 'present' ? 'Present' : 'Absent',
-      new Date(record.timestamp).toLocaleTimeString()
+      record.status === 'present' && record.timestamp
+        ? new Date(record.timestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })
+        : '—'
     ]);
 
     // Add table
@@ -894,7 +896,7 @@ export const LecturerDashboard: React.FC = () => {
                       <p className="text-xs text-gray-500">{entry.studentIdNumber} • {entry.distance}m away</p>
                     </div>
                     <span className="text-xs text-gray-400 flex-shrink-0">
-                      {new Date(entry.timestamp).toLocaleTimeString()}
+                      {new Date(entry.timestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })}
                     </span>
                   </div>
                 ))}
@@ -955,19 +957,19 @@ export const LecturerDashboard: React.FC = () => {
           )}
 
           {/* Filters and Actions */}
-          <div className="bg-white rounded-xl shadow-sm p-4 lg:p-6 mb-6 border border-gray-200">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm p-4 lg:p-6 mb-6 border border-slate-200 dark:border-slate-800">
             <div className="flex flex-col lg:flex-row lg:flex-wrap lg:items-end gap-4">
               <div className="flex-1 min-w-0 lg:min-w-[200px]">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
                   Search Students
                 </label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 z-10" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ttu-navy focus:border-transparent"
+                    className="input input-bordered w-full pl-10 pr-4 text-sm rounded-xl"
                     placeholder="Search by name or ID..."
                   />
                 </div>
@@ -975,26 +977,26 @@ export const LecturerDashboard: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3 lg:flex lg:gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
                     Start Date
                   </label>
                   <input
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full lg:w-auto px-3 lg:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ttu-navy focus:border-transparent text-sm"
+                    className="input input-bordered w-full lg:w-auto px-3 py-2 text-sm rounded-xl"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
                     End Date
                   </label>
                   <input
                     type="date"
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
-                    className="w-full lg:w-auto px-3 lg:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ttu-navy focus:border-transparent text-sm"
+                    className="input input-bordered w-full lg:w-auto px-3 py-2 text-sm rounded-xl"
                   />
                 </div>
               </div>
@@ -1003,17 +1005,17 @@ export const LecturerDashboard: React.FC = () => {
                 <button
                   onClick={downloadPDF}
                   disabled={!selectedCourse || filteredRecords.length === 0}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="btn btn-success btn-sm text-white rounded-xl font-bold gap-2 disabled:opacity-50"
                 >
-                  <Download className="w-5 h-5" />
+                  <Download className="w-4 h-4" />
                   PDF
                 </button>
                 <button
                   onClick={downloadCSV}
                   disabled={!selectedCourse || filteredRecords.length === 0}
-                  className="px-4 py-2 bg-teal-600 text-white rounded-lg font-medium hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="btn btn-primary btn-sm text-white rounded-xl font-bold gap-2 disabled:opacity-50"
                 >
-                  <FileSpreadsheet className="w-5 h-5" />
+                  <FileSpreadsheet className="w-4 h-4" />
                   CSV
                 </button>
               </div>
@@ -1021,61 +1023,53 @@ export const LecturerDashboard: React.FC = () => {
           </div>
 
           {/* Attendance Records Table */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="px-4 lg:px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Attendance Records</h2>
-              <p className="text-sm text-gray-500 mt-1">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+            <div className="px-4 lg:px-6 py-4 border-b border-slate-200 dark:border-slate-800">
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Attendance Records</h2>
+              <p className="text-xs text-slate-500 mt-0.5">
                 {filteredRecords.length} record{filteredRecords.length !== 1 ? 's' : ''} found
               </p>
             </div>
 
             {filteredRecords.length > 0 ? (
               <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50 border-b border-gray-200">
-                    <tr>
-                      <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Date
-                      </th>
-                      <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Student Name
-                      </th>
-                      <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
-                        Student ID
-                      </th>
-                      <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
-                        Time
-                      </th>
+                <table className="table table-zebra w-full">
+                  <thead>
+                    <tr className="bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">
+                      <th>Date</th>
+                      <th>Student Name</th>
+                      <th className="hidden sm:table-cell">Student ID</th>
+                      <th>Status</th>
+                      <th className="hidden md:table-cell">Time</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-200">
+                  <tbody>
                     {filteredRecords.map((record, index) => (
-                      <tr key={index} className="hover:bg-gray-50">
-                        <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <tr key={index} className="hover">
+                        <td className="whitespace-nowrap text-sm font-medium">
                           {new Date(record.date).toLocaleDateString()}
                         </td>
-                        <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        <td className="whitespace-nowrap text-sm font-bold text-slate-900 dark:text-white">
                           {record.student?.name || 'N/A'}
                         </td>
-                        <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-500 hidden sm:table-cell">
+                        <td className="whitespace-nowrap text-sm text-slate-500 hidden sm:table-cell">
                           {record.student?.studentId || 'N/A'}
                         </td>
-                        <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
+                        <td className="whitespace-nowrap">
                           {record.status === 'present' ? (
-                            <span className="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            <span className="badge badge-success badge-soft text-xs font-bold">
                               Present
                             </span>
                           ) : (
-                            <span className="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            <span className="badge badge-error badge-soft text-xs font-bold">
                               Absent
                             </span>
                           )}
                         </td>
-                        <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-500 hidden md:table-cell">
-                          {new Date(record.timestamp).toLocaleTimeString()}
+                        <td className="whitespace-nowrap text-sm text-slate-500 hidden md:table-cell">
+                          {record.status === 'present' && record.timestamp
+                            ? new Date(record.timestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })
+                            : '—'}
                         </td>
                       </tr>
                     ))}
@@ -1116,24 +1110,16 @@ export const LecturerDashboard: React.FC = () => {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Student Name
-                    </th>
-                    <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
-                      Student ID
-                    </th>
-                    <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
-                      Marked Time
-                    </th>
+              <table className="table table-zebra w-full">
+                <thead>
+                  <tr className="bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">
+                    <th>Student Name</th>
+                    <th className="hidden sm:table-cell">Student ID</th>
+                    <th>Status</th>
+                    <th className="hidden sm:table-cell">Marked Time</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody>
                   {courseStudents.map((student, index) => {
                     const record = attendanceRecords.find(
                       r => r.studentId === student.id && r.date === summaryDate
@@ -1177,7 +1163,9 @@ export const LecturerDashboard: React.FC = () => {
                           </button>
                         </td>
                         <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-500 hidden sm:table-cell">
-                          {isPresent && record ? new Date(record.timestamp).toLocaleTimeString() : '-'}
+                          {isPresent && record && record.timestamp
+                            ? new Date(record.timestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })
+                            : '—'}
                         </td>
                       </tr>
                     );

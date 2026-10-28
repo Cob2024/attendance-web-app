@@ -136,10 +136,11 @@ export const AdminLogin: React.FC = () => {
                 initial={{ opacity: 0, y: -8, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -8, scale: 0.95 }}
-                className="mb-5 p-3.5 bg-red-950/50 border border-red-800/60 rounded-xl flex items-start gap-2.5 text-red-300 text-sm"
+                role="alert"
+                className="alert alert-error alert-soft mb-5 p-3.5 rounded-xl flex items-start gap-2.5 text-xs"
               >
                 <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                <p className="leading-snug text-xs">{error}</p>
+                <p className="leading-snug">{error}</p>
               </motion.div>
             )}
           </AnimatePresence>
@@ -151,13 +152,13 @@ export const AdminLogin: React.FC = () => {
                 Administrator Email
               </label>
               <div className="relative">
-                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 z-10" />
                 <input
                   id="adminEmail"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-slate-800/80 border border-slate-700 rounded-xl focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 text-sm text-white transition-all placeholder:text-slate-500"
+                  className="input input-bordered w-full pl-10 pr-4 text-sm text-white rounded-xl"
                   placeholder="admin@ttu.edu.gh"
                   required
                   autoComplete="email"
@@ -171,13 +172,13 @@ export const AdminLogin: React.FC = () => {
                 Password
               </label>
               <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 z-10" />
                 <input
                   id="adminPassword"
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-10 py-3 bg-slate-800/80 border border-slate-700 rounded-xl focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 text-sm text-white transition-all placeholder:text-slate-500"
+                  className="input input-bordered w-full pl-10 pr-10 text-sm text-white rounded-xl"
                   placeholder="••••••••"
                   required
                   autoComplete="current-password"
@@ -185,7 +186,7 @@ export const AdminLogin: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors p-1"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors p-1 z-10"
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -199,11 +200,11 @@ export const AdminLogin: React.FC = () => {
               disabled={loading}
               whileHover={{ scale: 1.02, y: -1 }}
               whileTap={{ scale: 0.98 }}
-              className="w-full bg-gradient-to-r from-amber-500 via-amber-600 to-amber-500 hover:from-amber-600 hover:to-amber-600 text-slate-950 py-3.5 rounded-xl font-bold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl hover:shadow-amber-500/20 text-sm cursor-pointer border border-amber-400/30"
+              className="btn btn-primary btn-block text-white font-bold rounded-xl shadow-lg gap-2 py-3 text-sm"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
-                  <span className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-slate-900"></span>
+                  <span className="loading loading-spinner loading-xs"></span>
                   Authenticating...
                 </span>
               ) : (

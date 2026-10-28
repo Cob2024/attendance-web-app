@@ -1,6 +1,6 @@
 
   <!DOCTYPE html>
-  <html lang="en">
+  <html lang="en" data-theme="light">
     <head>
       <meta charset="UTF-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -13,6 +13,21 @@
       <link rel="apple-touch-icon" href="/assets/ttu-logo.png" />
       <link rel="manifest" href="/manifest.json" />
       <title>SmartAttend — TTU Attendance Management</title>
+      <script>
+        (function() {
+          try {
+            const theme = localStorage.getItem('theme');
+            const isDark = theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            if (isDark) {
+              document.documentElement.classList.add('dark');
+              document.documentElement.setAttribute('data-theme', 'dark');
+            } else {
+              document.documentElement.classList.remove('dark');
+              document.documentElement.setAttribute('data-theme', 'light');
+            }
+          } catch(e) {}
+        })();
+      </script>
     </head>
 
     <body>
